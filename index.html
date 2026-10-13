@@ -228,6 +228,7 @@ details.panel summary::-webkit-details-marker{margin-right:6px}
   <section id="t-pot"></section>
   <section id="t-calc"></section>
   <section id="t-icm"></section>
+  <section id="t-scn"></section>
   <section id="t-kuhn"></section>
   <section id="t-paper"></section>
   <section id="t-stat"></section>
@@ -340,7 +341,7 @@ function save(){try{localStorage.setItem('gtoTrainer',JSON.stringify(S))}catch(e
 /* ============ 分頁 ============ */
 const GROUPS=[
  {k:'learn',icon:'📚',name:'學習',tabs:[['t-course','課程'],['t-learn','翻前教學']]},
- {k:'practice',icon:'🎯',name:'練習',tabs:[['t-pre','翻前範圍'],['t-eq','勝率預測'],['t-pot','底池賠率'],['t-calc','計算機'],['t-icm','ICM 練習']]},
+ {k:'practice',icon:'🎯',name:'練習',tabs:[['t-pre','翻前範圍'],['t-eq','勝率預測'],['t-pot','底池賠率'],['t-calc','計算機'],['t-icm','ICM 練習'],['t-scn','情境練習']]},
  {k:'play',icon:'♠',name:'對戰',tabs:[['t-sim','模擬比賽']]},
  {k:'record',icon:'📈',name:'紀錄',tabs:[['t-hist','手牌歷史'],['t-stat','統計']]},
  {k:'more',icon:'⋯',name:'更多',tabs:[['t-kuhn','CFR 演示'],['t-paper','論文索引'],['t-install','安裝 App']]}
@@ -360,6 +361,7 @@ function show(id){
   if(id==='t-hist')renderHist();
   if(id==='t-install')renderInstall();
   if(id==='t-icm')renderIcm();
+  if(id==='t-scn')renderScn();
   if(id==='t-kuhn'&&!kuhnInit){kuhnInit=true;kuhnTrain(20000)}
   window.scrollTo(0,0);
 }
@@ -806,9 +808,9 @@ function pickFlopRoles(){
 }
 function setupFlop(fl){
   const bb=(SIM.btn+2)%6,sb=(SIM.btn+1)%6,op=fl.heroOpens?0:(SIM.btn+OFFS[fl.opPos])%6;
-  G.players.forEach(p=>{p.folded=true;p.bet=0;p.total=0;p.stack=100});
-  [op,bb].forEach(k=>{const p=G.players[k];p.folded=false;p.stack=97.5;p.total=2.5});
-  G.players[sb].total=0.5;G.players[sb].stack=99.5;
+  G.players.forEach(p=>{p.folded=true;p.bet=0;p.total=0;p.stack=SIM.depth});
+  [op,bb].forEach(k=>{const p=G.players[k];p.folded=false;p.stack=SIM.depth-2.5;p.total=2.5});
+  G.players[sb].total=0.5;G.players[sb].stack=SIM.depth-0.5;
   G.pf={raises:1,opener:op,last:op};G.flags[op]={v:1,p:1};G.flags[bb]={v:1};SIM.stats[op].vpip++;SIM.stats[op].pfr++;SIM.stats[bb].vpip++;
   G.pfMap[op]=RM[fl.opPos];
   G.pfMap[bb]=wmaps(FACE[FACEKEY['BB|'+fl.opPos]]||GEN.g1).mC;
@@ -856,7 +858,7 @@ function perform(i,cat,adv,to){
     G.last[i]=(p.allin?'全下 ':(wasBet||G.street===0?'加注到 ':'下注 '))+fmt(t);slog(`${nm} ${wasBet||G.street===0?'加注到':'下注'} ${fmt(t)}${p.allin?'（全下）':''}`);
     sfx('chip');if(G.street===0){if(!fl2.v){fl2.v=1;stt.vpip++}if(!fl2.p){fl2.p=1;stt.pfr++}}else stt.b++;
     if(G.street===0){G.pf.raises++;if(G.pf.raises===1)G.pf.opener=i;G.pf.last=i;setMap(i,adv&&adv.mR)}
-    else G.rng[i]=narrowBet(G.rng[i],G.board,0.5);
+    else{const fr=pay/Math.max(0.5,potNow()-pay);G.lastFrac=fr;G.rng[i]=narrowBet(G.rng[i],G.board,keepForSize(fr))}
   }
   after(i);
 }
@@ -870,7 +872,7 @@ function after(i){
   endStreet();
 }
 function endStreet(){
-  G.players.forEach(p=>{p.bet=0;p.acted=false});G.curBet=0;G.minRaise=1;G.last=[];
+  G.players.forEach(p=>{p.bet=0;p.acted=false});G.curBet=0;G.minRaise=1;G.last=[];G.lastFrac=undefined;
   if(G.street===3)return showdown();
   G.street++;G.board=G.full.slice(0,[0,3,4,5][G.street]);sfx('deal');G.seen[G.street]=G.players.map((p,k)=>k).filter(k=>!G.players[k].folded);
   if(G.street===1)G.players.forEach((p,k)=>{if(!p.folded){const m=G.pfMap[k];G.rng[k]=expand(m&&m.size?m:ALLMAP)}});
@@ -1675,7 +1677,7 @@ function tournamentUpdate(){
 
 // ---- 短碼「推或棄牌」與全下跟注（含 ICM）建議 ----
 function shortAdvice(i){
-  if(SIM.mode!=='sng'||!TN||G.street!==0)return null;
+  if(G.street!==0)return null;
   const p=G.players[i],pos=posName(i),l=handLabel(p.cards[0],p.cards[1]),n=G.nAlive;
   const rp=(n===2&&pos==='BTN')?'HU':pos,eff=effStackBB(i),pc=x=>Math.round(x*100)+'%';
   const toCall=Math.min(G.curBet-p.bet,p.stack);
@@ -1683,9 +1685,9 @@ function shortAdvice(i){
   if(jam>=0){
     const v=G.players[jam],vp=posName(jam),vrp=(n===2&&vp==='BTN')?'HU':vp,vpct=Math.round(shovePct(vrp,effStackBB(jam)));
     const r=equity(p.cards,[],expand(pctMap(vpct)),700),eq=r?r.eq:0.5;
-    const ic=icmNeed(i,jam),need=ic.need,m=eq-need;
+    const isT=SIM.mode==='sng'&&!!TN,ic=isT?icmNeed(i,jam):(()=>{const cn=toCall/(potNow()+toCall);return {need:cn,chipNeed:cn,bf:1}})(),need=ic.need,m=eq-need;
     const acts=m>=0.03?{r:0,c:1,f:0}:m>-0.03?{r:0,c:.5,f:.5}:{r:0,c:0,f:1};
-    const text=`${l}（${pos}）面對 ${vp} 全下（${fmt(v.stack+v.bet)}bb，估計約前 ${vpct}% 的牌）：你的勝率 ≈ ${pc(eq)}｜籌碼期望所需 ${pc(ic.chipNeed)}｜<b>ICM 所需 ${pc(need)}</b>（氣泡因子 ${ic.bf.toFixed(2)}）｜跟注 ${pc(acts.c)} ／ 棄牌 ${pc(acts.f)}`;
+    const text=`${l}（${pos}）面對 ${vp} 全下（${fmt(v.stack+v.bet)}bb，估計約前 ${vpct}% 的牌）：你的勝率 ≈ ${pc(eq)}｜${isT?'籌碼期望所需 '+pc(ic.chipNeed)+'｜<b>ICM 所需 '+pc(need)+'</b>（氣泡因子 '+ic.bf.toFixed(2)+'）':'<b>所需勝率 '+pc(need)+'</b>'}｜跟注 ${pc(acts.c)} ／ 棄牌 ${pc(acts.f)}`;
     return {acts,size:null,text,eq,mR:null,mC:null};
   }
   if(eff>18)return null;
@@ -1716,7 +1718,7 @@ function newHand(){
   const d=shuffled(52),bbAmt=sng?BLIND_LEVELS[TN.level][1]:1;
   G={players:[],full:d.slice(2*N,2*N+5),board:[],street:0,curBet:1,minRaise:1,over:false,reveal:false,pf:{raises:0,opener:-1,last:-1},pfMap:[],rng:[],decisions:[],log:[],last:[],winners:[],win:0,pay:[],flags:[],rec:[],seen:{},review:null,showAll:false,pb:0,pbets:[],holeAnim:true,info:null,hTimer:0,cur:0,adv:null,msg:'',nAlive:alive.length,bbAmt,startStack:[],posOf:[]};
   for(let i=0;i<N;i++){
-    const live=alive.includes(i),st=live?(sng?TN.chips[i]/bbAmt:100):0;
+    const live=alive.includes(i),st=live?(sng?TN.chips[i]/bbAmt:SIM.depth):0;
     G.players.push({name:SEATN[i],stack:st,bet:0,total:0,folded:!live,allin:false,acted:false,dead:!live,cards:live?[d[2*i],d[2*i+1]]:[]});
     G.startStack.push(st);
   }
@@ -1737,9 +1739,9 @@ function pickFlopRoles(){
 }
 function setupFlop(fl){
   const N=SIM.n,bb=(SIM.btn+2)%N,sb=(SIM.btn+1)%N,op=G.posOf.indexOf(fl.opPos);
-  G.players.forEach(p=>{p.folded=true;p.bet=0;p.total=0;p.stack=100});
-  [op,bb].forEach(k=>{const p=G.players[k];p.folded=false;p.stack=97.5;p.total=2.5});
-  G.players[sb].total=0.5;G.players[sb].stack=99.5;
+  G.players.forEach(p=>{p.folded=true;p.bet=0;p.total=0;p.stack=SIM.depth});
+  [op,bb].forEach(k=>{const p=G.players[k];p.folded=false;p.stack=SIM.depth-2.5;p.total=2.5});
+  G.players[sb].total=0.5;G.players[sb].stack=SIM.depth-0.5;
   G.pf={raises:1,opener:op,last:op};G.flags[op]={v:1,p:1};G.flags[bb]={v:1};SIM.stats[op].vpip++;SIM.stats[op].pfr++;SIM.stats[bb].vpip++;
   G.pfMap[op]=rangeFor(fl.opPos,N);
   G.pfMap[bb]=wmaps(FACE[FACEKEY['BB|'+p6(fl.opPos)]]||GEN.g1).mC;
@@ -1774,7 +1776,7 @@ function after(i){
 }
 function endStreet(){
   const N=G.players.length;
-  G.players.forEach(p=>{p.bet=0;p.acted=false});G.curBet=0;G.minRaise=1;G.last=[];
+  G.players.forEach(p=>{p.bet=0;p.acted=false});G.curBet=0;G.minRaise=1;G.last=[];G.lastFrac=undefined;
   if(G.street===3)return showdown();
   G.street++;G.board=G.full.slice(0,[0,3,4,5][G.street]);sfx('deal');G.seen[G.street]=G.players.map((p,k)=>k).filter(k=>!G.players[k].folded);
   if(G.street===1)G.players.forEach((p,k)=>{if(!p.folded){const m=G.pfMap[k];G.rng[k]=expand(m&&m.size?m:ALLMAP)}});
@@ -1950,7 +1952,7 @@ function renderSim(){
     <details class="adv"><summary>⚙ 進階設定與說明</summary><div class="adv-body">
       <div>${SIM.mode==='cash'?T_("setFlop(!SIM.flop)",'從翻牌開始',SIM.flop):''}${T_("tog('info')",'即時資訊',SIM.info)}${T_("tog('reveal')",'顯示對手風格',SIM.reveal)}${T_("tog('sound')",'🔊 音效',SIM.sound)}${T_("tog('timerOn')",'⏱ 20 秒倒數',SIM.timerOn)}${T_("tog('keys')",'⌨ 單鍵快捷鍵',SIM.keys!==false)}</div>
       <div>${SIM.mode==='cash'?`比賽手數：<select id="s-max" aria-label="比賽手數" style="width:auto">${[10,20,30,50,100].map(n=>`<option ${n===SIM.max?'selected':''}>${n}</option>`).join('')}</select>（更改後請按「重新開始」）`:`升盲速度：<select id="s-lh" aria-label="升盲速度" style="width:auto">${[5,8,12].map(n=>`<option value="${n}" ${n===SIM.levelHands?'selected':''}>每 ${n} 手升一級</option>`).join('')}</select>（更改後請按「重新開始」）`}</div>
-      <div class="mut" style="margin-top:6px">現金桌每手重置為 100bb；錦標賽起始 1500 籌碼，盲注 10/20 起，淘汰到剩一人或你被淘汰為止，無前注。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你調整。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div></div></details>
+      <div class="mut" style="margin-top:6px">現金桌每手重置為起始籌碼深度（預設 100bb）；錦標賽起始 1500 籌碼，盲注 10/20 起，淘汰到剩一人或你被淘汰為止，無前注。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你調整。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div></div></details>
     <div class="mut">${counter}</div></div>
   ${tbarHTML()}
   ${table}
@@ -1959,6 +1961,7 @@ function renderSim(){
   $('s-tn').onchange=e=>setTable(+e.target.value);
   $('s-tm').onchange=e=>setMode(e.target.value);
   if($('s-max'))$('s-max').onchange=e=>{SIM.max=+e.target.value;renderSim()};
+  if($('s-dp'))$('s-dp').onchange=e=>{SIM.depth=+e.target.value};
   if($('s-lh'))$('s-lh').onchange=e=>{SIM.levelHands=+e.target.value;renderSim()};
   G.pb=G.board.length;G.pbets=G.players.map(p=>p.bet);G.holeAnim=false;if(typeof sheetA11y==='function')sheetA11y();
 }
@@ -2285,8 +2288,9 @@ function renderSim(){
       <div class="topbar2"><select id="s-tn" aria-label="桌型"><option value="6" ${N===6?'selected':''}>6 人桌</option><option value="9" ${N===9?'selected':''}>9 人桌</option></select>
         <select id="s-tm" aria-label="賽制"><option value="cash" ${SIM.mode==='cash'?'selected':''}>現金桌（每手重置 100bb）</option><option value="sng" ${SIM.mode==='sng'?'selected':''}>錦標賽 SNG（盲注遞增、有獎金）</option></select></div>
       <div>${SIM.mode==='cash'?T_("setFlop(!SIM.flop)",'從翻牌開始',SIM.flop):''}${T_("tog('info')",'即時資訊',SIM.info)}${T_("tog('reveal')",'顯示對手風格',SIM.reveal)}${T_("tog('sound')",'🔊 音效',SIM.sound)}${T_("tog('timerOn')",'⏱ 20 秒倒數',SIM.timerOn)}${T_("tog('keys')",'⌨ 單鍵快捷鍵',SIM.keys!==false)}</div>
+      ${SIM.mode==='cash'?`<div style="margin-top:6px">起始籌碼：<select id="s-dp" aria-label="起始籌碼深度" style="width:auto">${[[12,'12bb 極短碼'],[25,'25bb 中短碼'],[40,'40bb 中碼'],[100,'100bb 常碼'],[200,'200bb 深碼']].map(([v,l])=>`<option value="${v}" ${v===SIM.depth?'selected':''}>${l}</option>`).join('')}</select>（更改後請按「套用並重新開始」）</div>`:''}
       <div style="margin-top:6px">${SIM.mode==='cash'?`比賽手數：<select id="s-max" aria-label="比賽手數" style="width:auto">${[10,20,30,50,100].map(n=>`<option ${n===SIM.max?'selected':''}>${n}</option>`).join('')}</select>`:`升盲速度：<select id="s-lh" aria-label="升盲速度" style="width:auto">${[5,8,12].map(n=>`<option value="${n}" ${n===SIM.levelHands?'selected':''}>每 ${n} 手升一級</option>`).join('')}</select>`}（更改後請按「重新開始」）</div>
-      <div class="mut" style="margin-top:8px">現金桌每手重置為 100bb；錦標賽起始 1500 籌碼，盲注 10/20 起，無前注，打到你被淘汰或只剩一人為止。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你。提示依範圍表與蒙地卡羅估算，非即時求解器輸出。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div>
+      <div class="mut" style="margin-top:8px">現金桌每手重置為起始籌碼深度（預設 100bb）；錦標賽起始 1500 籌碼，盲注 10/20 起，無前注，打到你被淘汰或只剩一人為止。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你。提示依範圍表與蒙地卡羅估算，非即時求解器輸出。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div>
       <button class="b big" style="margin-top:10px" onclick="newMatch()">套用並重新開始</button></div></div>`;
   }
   const counter=sng?`第 ${SIM.hands+(G.over?0:1)} 手｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):'—'}%`:
@@ -2299,6 +2303,7 @@ function renderSim(){
   <div class="dock">${info}${hint}${ctl}${resline}</div>${sheet}`;
   if($('s-tn')){$('s-tn').onchange=e=>setTable(+e.target.value);$('s-tm').onchange=e=>setMode(e.target.value)}
   if($('s-max'))$('s-max').onchange=e=>{SIM.max=+e.target.value;renderSim()};
+  if($('s-dp'))$('s-dp').onchange=e=>{SIM.depth=+e.target.value};
   if($('s-lh'))$('s-lh').onchange=e=>{SIM.levelHands=+e.target.value;renderSim()};
   G.pb=G.board.length;G.pbets=G.players.map(p=>p.bet);G.holeAnim=false;if(typeof sheetA11y==='function')sheetA11y();
 }
@@ -2435,6 +2440,226 @@ function renderCalc(){
     <span class="mut">所需勝率對照：下注 1/2 池 → 25%、3/4 池 → 30%、滿池 → 33%、2 倍池 → 40%。</span></div>`;
   };
 }
+
+/* ============ 情境練習：短碼、常碼、尺度解讀 ============ */
+SIM.depth=100;
+function keepForSize(f){return f<=0.3?0.7:f<=0.4?0.62:f<=0.6?0.55:f<=0.8?0.48:f<=1.05?0.42:0.33}
+function sizeRead(f){
+  return f<=0.34?'小注：範圍較寬，含薄價值、保護與試探':f<=0.6?'中等尺度：標準的價值與詐唬混合':f<=0.85?'偏大：範圍偏極化（強牌或詐唬）':f<=1.1?'滿池：高度極化':'超池：極化到只剩很強的牌或純詐唬';
+}
+const _postAdvice=postAdvice;
+postAdvice=function(i){
+  const r=_postAdvice(i),p=G.players[i];
+  if(G.curBet>p.bet&&G.lastFrac!==undefined&&G.lastFrac>0){
+    const f=G.lastFrac;
+    r.text+=`｜<b>尺度解讀</b>：對手下注約 ${Math.round(f*100)}% 底池 → ${sizeRead(f)}（所需勝率 ${Math.round(f/(1+2*f)*100)}%、最低防守 ${Math.round(100/(1+f))}%）`;
+  }
+  return r;
+};
+
+const SCN={mode:'A',sc:null,answered:false};
+const scnStat=k=>{S.scn=S.scn||{};S.scn[k]=S.scn[k]||{n:0,c:0};return S.scn[k]};
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[(Math.random()*a.length)|0];
+const SCN_TITLE={A:'短碼：推或棄牌',B:'短碼：面對全下',C:'常碼：翻後下注',D:'尺度解讀：面對下注'};
+function boardTexture(b){
+  const suits={},ranks=b.map(c=>c%13).sort((x,y)=>x-y);b.forEach(c=>{const s=(c/13)|0;suits[s]=(suits[s]||0)+1});
+  const paired=new Set(ranks).size<ranks.length,fl=Math.max(...Object.values(suits)),span=ranks[ranks.length-1]-ranks[0];
+  const tags=[];if(paired)tags.push('配對面');
+  if(fl>=3)tags.push('同花面（有三張同花）');else if(fl===2&&b.length===3)tags.push('兩張同花（有聽花）');
+  if(span<=4&&new Set(ranks).size>=3)tags.push('連張面（順子聽牌多）');
+  if(!tags.length)tags.push('乾燥面（聽牌少）');
+  return tags.join('、');
+}
+function sampleCombo(map,used){
+  const cs=expand(map).filter(x=>!used.has(x.a)&&!used.has(x.b));let u=Math.random()*cs.reduce((t,x)=>t+x.w,0),x=cs[cs.length-1];
+  for(const y of cs){u-=y.w;if(u<=0){x=y;break}}return [x.a,x.b];
+}
+/* ---- A：短碼推或棄牌 ---- */
+function scnGenA(){
+  const pos=pick(['UTG','HJ','CO','BTN','SB','BTN','SB']),eff=rnd(6,16),pct=shovePct(pos,eff),m=pctMap(pct),bl=borderline(m);
+  let l;if(Math.random()<0.55&&bl.length)l=pick(bl);else{const d=shuffled(52);l=handLabel(d[0],d[1])}
+  const x=pick(expand(new Map([[l,1]])));
+  return {type:'A',pos,eff,pct,m,hand:[x.a,x.b],label:l,f:m.get(l)||0};
+}
+/* ---- B：短碼面對全下（現金桌，只看籌碼期望） ---- */
+function scnGenB(){
+  const vp=pick(['UTG','HJ','CO','BTN','SB']),E=rnd(6,16),vpct=Math.round(shovePct(vp,E)),rg=expand(pctMap(vpct));
+  const dead=vp==='SB'?0:0.5,pot0=E+1+dead,toCall=E-1,need=toCall/(pot0+toCall);
+  let best=null;
+  for(let k=0;k<14;k++){const d=shuffled(52),h=[d[0],d[1]],r=equity(h,[],rg,500);if(!r)continue;const diff=Math.abs(r.eq-need);if(!best||diff<best.diff)best={h,eq:r.eq,diff}}
+  return {type:'B',vp,E,vpct,need,pot0,toCall,hand:best.h,eq:best.eq};
+}
+/* ---- C：常碼翻後下注 ---- */
+function betActs(eq,street){
+  if(eq>=.72)return {r:.85,c:.15,frac:.66};
+  if(eq>=.58)return {r:.6,c:.4,frac:.5};
+  if(eq>=.45)return {r:.25,c:.75,frac:.33};
+  if(eq>=.25){const b=street<3?.3:.12;return {r:b,c:1-b,frac:.5}}
+  return {r:.12,c:.88,frac:.66};
+}
+function scnGenC(){
+  const depth=pick([40,60,100]),op=pick(['CO','BTN','UTG','HJ']);
+  const heroMap=rangeFor(op,6),vMap=wmaps(FACE[FACEKEY['BB|'+p6(op)]]||GEN.g1).mC;
+  const used=new Set(),hand=sampleCombo(heroMap,used);hand.forEach(c=>used.add(c));
+  const d=shuffled(52).filter(c=>!used.has(c)),board=d.slice(0,3);
+  const r=equity(hand,board,expand(vMap),1500),eq=r?r.eq:0.5,a=betActs(eq,1);
+  return {type:'C',depth,op,hand,board,eq,acts:a,pot:5.5,spr:(depth-2.5)/5.5,tex:boardTexture(board)};
+}
+/* ---- D：尺度解讀 ---- */
+function scnGenD(){
+  const street=pick([1,1,2]),op=pick(['CO','BTN','HJ']),f=pick([.25,.33,.5,.75,1,1.5]);
+  const used=new Set(),hand=sampleCombo(wmaps(FACE[FACEKEY['BB|'+p6(op)]]||GEN.g1).mC,used);hand.forEach(c=>used.add(c));
+  const d=shuffled(52).filter(c=>!used.has(c)),board=d.slice(0,street===1?3:4);
+  const pot=pick([6,8,10,12,16]),bet=Math.max(1,round2(pot*f)),ff=bet/pot;
+  const base=expand(rangeFor(op,6)),rg=narrowBet(base,board,keepForSize(ff));
+  const r=equity(hand,board,rg,1200),eq=r?r.eq:0.5,need=bet/(pot+2*bet),m=eq-need;
+  let acts;
+  if(eq>=.8)acts={r:.65,c:.35,f:0};else if(m>=.10)acts={r:.12,c:.88,f:0};else if(m>=.02)acts={r:0,c:1,f:0};
+  else if(m>=-.03)acts={r:0,c:.5,f:.5};else if(eq>.28&&street<3)acts={r:.12,c:0,f:.88};else acts={r:0,c:0,f:1};
+  return {type:'D',street,op,hand,board,pot,bet,ff,eq,need,mdf:pot/(pot+bet),acts,base,m};
+}
+function scnNew(){
+  SCN.sc={A:scnGenA,B:scnGenB,C:scnGenC,D:scnGenD}[SCN.mode]();SCN.answered=false;renderScn();
+}
+function scnGo(m){SCN.mode=m;SCN.sc=null;show('t-scn')}
+function scnSet(m){SCN.mode=m;scnNew()}
+function scnAnswer(ch){
+  if(SCN.answered)return;SCN.answered=true;
+  const s=SCN.sc,st=scnStat(SCN.mode);let ok=false,html='';
+  const pc=x=>(x*100).toFixed(1)+'%';
+  if(s.type==='A'){
+    ok=ch==='shove'?s.f>0:s.f<1;
+    html=`${s.f>=1?'在全下範圍內 → 全下':s.f<=0?'不在範圍內 → 棄牌':'位於範圍邊界，兩者皆可'}。<br>${s.pos}、有效籌碼 ${s.eff}bb：全下範圍約前 <b>${Math.round(s.pct)}%</b>。位置越後、籌碼越淺，範圍越寬。${gridHTML(s.m,s.label)}<span class="mut">範圍為近似值（依手牌強弱排序）。</span>`;
+  }else if(s.type==='B'){
+    const right=s.eq>=s.need,close=Math.abs(s.eq-s.need)<0.015;ok=close||ch==='call'===right;
+    html=`你的勝率對對手全下範圍（約前 ${s.vpct}%）：<b>${pc(s.eq)}</b><br>需要的勝率 = 跟注額 ÷（底池 + 跟注額）= ${fmt(s.toCall)} ÷ (${fmt(s.pot0)} + ${fmt(s.toCall)}) = <b>${pc(s.need)}</b><br>${close?'非常接近門檻，兩者皆可。':right?'勝率高於所需勝率 → 跟注。':'勝率低於所需勝率 → 棄牌。'}<br><span class="mut">範圍越寬（對手籌碼越淺），你可以跟注得越寬。</span>`;
+  }else if(s.type==='C'){
+    const a=s.acts,fr=a.frac;
+    const okMap={check:a.c>=.2||a.r<.8,small:a.r>=.2&&fr<=.5,big:a.r>=.2&&fr>=.5};ok=!!okMap[ch];
+    html=`你的勝率對 BB 防守範圍：<b>${pc(s.eq)}</b>｜牌面：${s.tex}｜SPR ${s.spr.toFixed(1)}<br>建議：下注 ${Math.round(a.r*100)}%（尺度約 ${Math.round(fr*100)}% 底池 ≈ ${fmt(s.pot*fr)}bb）／ 過牌 ${Math.round(a.c*100)}%<br><span class="mut">勝率高 → 用較大尺度收價值；中等 → 小注保護與收薄價值；偏低 → 多過牌，有聽牌時偶爾半詐唬。SPR 低（籌碼淺）時，成牌更容易打到全下。</span>`;
+  }else if(s.type==='D'){
+    const a=s.acts;ok=a[ch]>=.15;
+    // 同一手牌在不同尺度下的勝率
+    const rows=[.33,.5,.75,1,1.5].map(f=>{const rg=narrowBet(s.base,s.board,keepForSize(f)),r=equity(s.hand,s.board,rg,500);return `<tr><td>${Math.round(f*100)}%</td><td>${r?pc(r.eq):'—'}</td><td>${pc(f/(1+2*f))}</td><td>${Math.round(100/(1+f))}%</td></tr>`}).join('');
+    html=`對手下注 ${fmt(s.bet)}bb（約 ${Math.round(s.ff*100)}% 底池）→ ${sizeRead(s.ff)}。<br>你的勝率對「依尺度縮窄後的範圍」：<b>${pc(s.eq)}</b>｜所需勝率 <b>${pc(s.need)}</b>｜你的最低防守頻率 ${Math.round(s.mdf*100)}%<br>建議：加注 ${Math.round(a.r*100)}% ／ 跟注 ${Math.round(a.c*100)}% ／ 棄牌 ${Math.round(a.f*100)}%
+      <table class="t" style="margin-top:6px"><tr><th>對手尺度</th><th>你的勝率（範圍隨尺度縮窄）</th><th>所需勝率</th><th>最低防守</th></tr>${rows}</table>
+      <span class="mut">尺度越大，對手範圍越極化、你的勝率越低，所需勝率卻只小幅上升；因此面對大注要更謹慎。</span>`;
+  }
+  st.n++;if(ok)st.c++;save();
+  $('scn-res').innerHTML=`<div class="res ${ok?'ok':'bad'}"><b>${ok?'✔ 正確':'✘ 錯誤'}</b>　${html}</div>`;
+  document.querySelectorAll('#t-scn .scn-act').forEach(b=>{b.disabled=true});
+}
+function renderScn(){
+  if(!SCN.sc)SCN.sc={A:scnGenA,B:scnGenB,C:scnGenC,D:scnGenD}[SCN.mode]();
+  const s=SCN.sc,st=scnStat(SCN.mode);
+  const tabs=Object.keys(SCN_TITLE).map(k=>`<button class="b ${SCN.mode===k?'':'s'}" onclick="scnSet('${k}')">${SCN_TITLE[k]}</button>`).join('');
+  let desc='',acts='';
+  if(s.type==='A'){
+    desc=`<b>${s.pos}</b>，有效籌碼 <b>${s.eff}bb</b>，前面的人都棄牌，輪到你。（現金桌，只看籌碼期望）`;
+    acts=`<button class="b g scn-act" onclick="scnAnswer('shove')">全下</button><button class="b r scn-act" onclick="scnAnswer('fold')">棄牌</button>`;
+  }else if(s.type==='B'){
+    desc=`你在<b>大盲</b>（已投 1bb）。<b>${s.vp}</b> 全下 ${s.E}bb，${s.vp==='SB'?'其他人棄牌':'小盲棄牌'}。底池 ${fmt(s.pot0)}bb，你要再跟 ${fmt(s.toCall)}bb。`;
+    acts=`<button class="b g scn-act" onclick="scnAnswer('call')">跟注</button><button class="b r scn-act" onclick="scnAnswer('fold')">棄牌</button>`;
+  }else if(s.type==='C'){
+    desc=`有效籌碼 <b>${s.depth}bb</b>。你在 <b>${s.op}</b> 開池，BB 跟注，底池 5.5bb。BB 先過牌，輪到你。SPR ≈ ${s.spr.toFixed(1)}。`;
+    acts=`<button class="b s scn-act" onclick="scnAnswer('check')">過牌</button><button class="b scn-act" onclick="scnAnswer('small')">下注 1/3 底池</button><button class="b g scn-act" onclick="scnAnswer('big')">下注 2/3 底池</button>`;
+  }else{
+    desc=`${s.street===1?'翻牌':'轉牌'}圈，底池 ${s.pot}bb。你在大盲防守，對手是 <b>${s.op}</b> 的開池者（範圍＝${s.op} 開池範圍），他對你下注 <b>${fmt(s.bet)}bb</b>（約 ${Math.round(s.ff*100)}% 底池）。`;
+    acts=`<button class="b r scn-act" onclick="scnAnswer('f')">棄牌</button><button class="b g scn-act" onclick="scnAnswer('c')">跟注</button><button class="b scn-act" onclick="scnAnswer('r')">加注</button>`;
+  }
+  $('t-scn').innerHTML=`<div class="panel"><h2>情境練習</h2>
+  <div class="mut">針對特定情境反覆練習：短碼推或棄牌、面對短碼全下、常碼翻後下注，以及從對手的下注尺度推測範圍。範圍與策略為近似值。</div>
+  <div class="qb" style="margin-top:8px">${tabs}</div></div>
+  <div class="panel"><h2>${SCN_TITLE[SCN.mode]}</h2><div>${desc}</div>
+  <div class="cards">${cardsHTML(s.hand)}${s.board?'<span class="sep"></span>'+cardsHTML(s.board):''}</div>
+  <div class="abar3">${acts}</div><button class="b s" style="margin-top:8px" onclick="scnNew()">下一題</button>
+  <div id="scn-res" aria-live="polite"></div>
+  <div class="mut" style="margin-top:6px">此模式累計 ${st.n} 題，正確率 ${st.n?Math.round(st.c/st.n*100):0}%。</div></div>`;
+}
+
+/* ============ 課程擴充：第 11 級 情境專題（籌碼深度與尺度） ============ */
+QGEN.sizeneed=function(){
+  const fr=pick([1/4,1/3,1/2,2/3,3/4,1,3/2]),label={0.25:'1/4',0.333:'1/3',0.5:'1/2',0.667:'2/3',0.75:'3/4',1:'滿池（1 倍）',1.5:'1.5 倍底池'};
+  const key=Object.keys(label).reduce((a,b)=>Math.abs(+b-fr)<Math.abs(+a-fr)?b:a),name=label[key];
+  const askMdf=Math.random()<0.5,need=Math.round(fr/(1+2*fr)*100),mdf=Math.round(100/(1+fr));
+  const ans=askMdf?mdf:need,set=[ans];
+  [askMdf?need:mdf,ans+8,ans-8,ans+14,50].forEach(x=>{x=Math.round(x);if(x>0&&x<100&&!set.includes(x)&&set.length<4)set.push(x)});
+  let z=ans+3;while(set.length<4){if(!set.includes(z))set.push(z);z++}
+  return {q:`對手下注 <b>${name}</b>。${askMdf?'你的「最低防守頻率」（MDF）':'你跟注至少需要的勝率'}約是多少？`,opts:set.map(x=>x+'%'),a:0,
+    why:askMdf?`MDF = 底池 ÷（底池 + 下注）= 1 ÷ (1 + ${fr.toFixed(2)}) ≈ ${mdf}%。`:`所需勝率 = 下注 ÷（底池 + 2×下注）= ${fr.toFixed(2)} ÷ (1 + 2×${fr.toFixed(2)}) ≈ ${need}%。`};
+};
+COURSE.push({t:'情境專題：籌碼深度與尺度',goal:'依籌碼深度調整打法，並從對手的下注尺度推測範圍、做出回應',lessons:[
+ {id:'11.1',t:'籌碼深度總覽：深碼、常碼、中碼、短碼',prac:[['對戰：選擇起始籌碼深度','t-sim'],['情境練習','t-scn']],
+  body:()=>`<p>同一手牌，在不同籌碼深度下的打法可以完全不同。先認識五個區間（以有效籌碼的 bb 數計）：</p>
+  <table class="t"><tr><th>深度</th><th>名稱</th><th>策略重點</th></tr>
+  <tr><td>150bb 以上</td><td>深碼</td><td>隱含賠率高：小對子、同花連張價值上升；3-bet 尺碼更大；要能打三條街</td></tr>
+  <tr><td>80–120bb</td><td>常碼</td><td>標準的翻前圖表與翻後打法（本練習器的預設）</td></tr>
+  <tr><td>40–60bb</td><td>中碼</td><td>隱含賠率下降，小對子、同花連張價值降低；3-bet 底池 SPR 約 2–3，常是一兩條街就決定</td></tr>
+  <tr><td>20–40bb</td><td>中短碼</td><td>開池尺碼縮小，3-bet 全下成為選項；翻後 SPR 低，頂對常能打到全下</td></tr>
+  <tr><td>15bb 以下</td><td>短碼</td><td>推或棄牌，翻後幾乎沒有操作空間</td></tr></table>
+  <h3>SPR 快速估算</h3><p>SPR＝有效籌碼 ÷ 底池。單次加注底池（約 5.5bb）：100bb → SPR ≈ 17；40bb → ≈ 7；20bb → ≈ 3。SPR 越低，越應該「用手牌直接決定要不要投入全部籌碼」。</p>
+  <div class="mut">對戰設定（⚙）可選起始籌碼：12 / 25 / 40 / 100 / 200bb，再到「情境練習」做專項練習。</div>`,
+  quiz:[Q('有效籌碼 40bb、底池 5.5bb（單次加注），SPR 約為？',['3','7','17','30'],1,'(40 − 2.5) ÷ 5.5 ≈ 6.8，約 7。'),
+        Q('哪種深度最重視「小對子、同花連張」這類隱含賠率牌？',['短碼','中短碼','深碼','都一樣'],2,'籌碼越深，成牌後能多贏的錢越多，隱含賠率越高。'),
+        Q('籌碼 12bb 時，翻前通常傾向？',['小加注看翻牌','全下或棄牌','只跟注','一律過牌'],1,'短碼區翻後沒有操作空間，翻前推或棄牌最有效率。')]},
+ {id:'11.2',t:'短碼與中短碼打法（10–25bb）',prac:[['情境練習：短碼推或棄牌','t-scn'],['情境練習：面對短碼全下','t-scn']],
+  body:()=>`<h3>1. 先看有效籌碼與位置</h3><p>有效籌碼是你和潛在對手中較短的那個。位置越後、籌碼越淺，全下範圍越寬（本練習器 10bb：UTG 約 12%、CO 約 30%、BTN 約 45%、SB 約 55%）。</p>
+  <h3>2. 三種選擇</h3><ul><li><b>10–15bb 以下</b>：全下或棄牌（開池全下）。</li>
+  <li><b>15–25bb</b>：可以小開池（約 2–2.2bb）後視情況面對 3-bet 全下；或乾脆全下較強的牌。</li>
+  <li><b>面對加注</b>：用強牌 3-bet 全下，其餘棄牌；中等牌常常棄牌比跟注好。</li></ul>
+  <h3>3. 面對別人的全下</h3><p>用<b>你的勝率對他的範圍</b>與<b>所需勝率</b>比較（跟注額 ÷（底池 + 跟注額））。對手籌碼越淺，他的全下範圍越寬，你就能跟注得越寬；在 100bb 遇到全下，則要假設他幾乎只有最強的牌。</p>
+  <div class="res warn">錦標賽泡沫期要再考慮 ICM（第 9 級）；現金桌只看籌碼期望。</div>`,
+  quiz:[Q('15bb 的 BTN，前面都棄牌，通常合理的做法是？',['重重加注 4bb','全下範圍內的牌，其餘棄牌','只跟注盲注','全部棄牌'],1,'短碼區用「全下或棄牌」最有效率，BTN 的全下範圍很寬。'),
+        Q('對手籌碼越淺，你面對他的全下時？',['要更緊','可以跟注得更寬','不能跟注','不需要考慮'],1,'短碼的全下範圍很寬，你的牌對它的勝率就比較高。'),
+        Q('面對 4bb 的加注，你只有 15bb 且持中等牌（如 A9o），較常見的做法是？',['跟注看翻牌','視位置與對手範圍，傾向棄牌或全下，不容易只跟注','加注到 8bb','過牌'],1,'短碼面對加注，跟注會讓翻後 SPR 很低又沒有位置，通常「全下或棄牌」。')]},
+ {id:'11.3',t:'常碼打法（40–100bb）',prac:[['情境練習：常碼翻後下注','t-scn'],['模擬比賽（100bb）','t-sim']],
+  body:()=>`<p>常碼是本練習器翻前圖表的標準情境。重點是<b>有計畫地打完整個牌局</b>。</p>
+  <h3>翻前</h3><ul><li>開池 2.2–2.5bb（SB 約 3bb）；3-bet 有位置約 3 倍、沒位置約 4 倍。</li><li>40–60bb：開池可略小、較少用邊緣的投機牌；3-bet 後 SPR 低，強牌可直接打光。</li></ul>
+  <h3>翻後：先想好三條街的計畫</h3>
+  <ol><li><b>成牌價值牌</b>：計畫打兩到三條街（翻牌小到中注、轉牌加大、河牌視對手跟注範圍收尾）。</li>
+  <li><b>聽牌</b>：翻牌半詐唬，轉牌補中就繼續下注，沒補中依賠率與對手反應決定。</li>
+  <li><b>弱的成牌</b>：多控制底池，用過牌或小注收取薄價值，不打大底池。</li></ol>
+  <h3>尺度選擇（常見做法）</h3><table class="t"><tr><th>情境</th><th>常用尺度</th></tr><tr><td>乾燥牌面持續下注</td><td>約 1/3 底池，高頻率</td></tr><tr><td>濕潤牌面、強牌或好聽牌</td><td>約 2/3 底池，頻率較低</td></tr><tr><td>河牌極化範圍</td><td>3/4 底池到滿池</td></tr></table>`,
+  quiz:[Q('常碼下，乾燥牌面（K♠7♦2♣）上翻前加注者的持續下注，常用？',['滿池大注、低頻率','約 1/3 底池、高頻率','一律過牌','全下'],1,'乾燥牌面範圍優勢明顯，小注高頻率就能獲利。'),
+        Q('「有計畫地打三條街」的意思是？',['每條街都全下','在翻牌就想好轉牌、河牌要怎麼打','只打翻牌','隨機決定'],1,'先規劃整手牌的價值與詐唬路線，避免被迫在河牌做難決定。'),
+        Q('40–60bb 比 100bb 更不適合的牌是？',['AA','AK','小同花連張（如 65s）','KK'],2,'籌碼淺時隱含賠率變低，投機牌價值下降。')]},
+ {id:'11.4',t:'判讀對手的下注尺度',prac:[['情境練習：尺度解讀','t-scn'],['對戰：看提示中的「尺度解讀」','t-sim']],
+  body:()=>`<p>對手的下注<b>尺度</b>是最容易取得的資訊之一：它同時決定你<b>需要的勝率</b>與你對他<b>範圍</b>的推測。</p>
+  <table class="t"><tr><th>對手下注</th><th>範圍的一般傾向</th><th>你需要的勝率</th><th>最低防守頻率</th></tr>
+  <tr><td>約 1/4–1/3 底池</td><td>範圍較寬：薄價值、保護、試探</td><td>20%</td><td>75%</td></tr>
+  <tr><td>約 1/2 底池</td><td>標準：價值與詐唬混合</td><td>25%</td><td>67%</td></tr>
+  <tr><td>約 2/3–3/4 底池</td><td>偏強、偏極化</td><td>29–30%</td><td>57–60%</td></tr>
+  <tr><td>滿池（1 倍）</td><td>高度極化：很強或詐唬</td><td>33%</td><td>50%</td></tr>
+  <tr><td>1.5 倍底池（超池）</td><td>極化到只剩堅果級牌與純詐唬</td><td>37.5%</td><td>40%</td></tr></table>
+  <h3>極化與合併</h3><ul><li><b>極化（polarized）</b>：下注範圍只有很強的牌和詐唬牌，中等牌通常過牌。大注常是這類範圍。</li>
+  <li><b>合併（merged）</b>：連中等強度的牌也下注，範圍較連續。小注常是這類範圍。</li></ul>
+  <p>這些是「<b>一般傾向</b>」，不是定律；牌面、位置與對手風格都會改變它。觀察到對手用不同尺度打不同強度的牌（尺度洩漏）時才能剝削，而且要有足夠樣本。</p>
+  <div class="mut">對戰的 GTO 提示在面對下注時，會自動顯示「尺度解讀」，並依尺度縮窄對手的範圍後再算你的勝率。</div>`,
+  quiz:[G_('sizeneed'),G_('sizeneed'),Q('對手下注越大，他的範圍通常？',['越寬','越極化（強牌與詐唬）','不變','只剩弱牌'],1,'大注傾向由很強的牌與詐唬組成，中等牌較少用大注。')]},
+ {id:'11.5',t:'面對不同尺度的回應流程',prac:[['情境練習：尺度解讀','t-scn']],
+  body:()=>`<p>面對下注時，用這個固定流程：</p>
+  <ol><li><b>還原比例</b>：對手下注佔底池多少？</li>
+  <li><b>算兩個數字</b>：所需勝率與最低防守頻率。</li>
+  <li><b>縮窄範圍</b>：小注 → 範圍較寬；大注 → 範圍偏極化、較窄。</li>
+  <li><b>算你的勝率</b>：你的手牌對「縮窄後的範圍」有多少？聽牌要用補中率。</li>
+  <li><b>決定</b>：勝率明顯高於所需 → 跟注或加注；接近 → 看位置與隱含賠率；明顯低於 → 棄牌。</li></ol>
+  <h3>什麼時候加注？</h3><ul><li>對手<b>小注</b>、範圍寬：用強牌價值加注，或用有聽牌的牌半詐唬加注。</li><li>對手<b>大注</b>：加注代表很強，通常只用堅果級牌；多半跟注或棄牌。</li></ul>
+  <h3>範例</h3><p>你有中等一對，對手 1/3 底池下注：他的範圍很寬，你的一對勝率通常高於所需的 20%，跟注。若他下注 1.5 倍底池：他的範圍極化，同一手一對的勝率可能掉到所需的 37.5% 以下，棄牌。</p>`,
+  quiz:[Q('對手下注 1/3 底池，你持中等一對，通常？',['棄牌','範圍較寬、你的勝率常高於所需，跟注','全下','過牌'],1,'小注範圍寬，你的一對對它仍有不錯的勝率，所需勝率只要約 20%。'),
+        Q('對手下注 1.5 倍底池（超池），你持中等一對，常見的處理是？',['一律加注','範圍極化，傾向棄牌','一律全下','一律跟注'],1,'超池代表範圍高度極化，一對的勝率常不足所需的 37.5%。'),
+        Q('面對下注時，「縮窄範圍」是在？',['忽略對手的動作','依下注尺度調整你對他範圍的估計','猜他的手牌','換座位'],1,'尺度越大，範圍越極化、越窄，你的勝率要對那個範圍計算。')]}
+]});
+const _pracList2=pracList;
+pracList=function(l){
+  if(l!==11)return _pracList2(l);
+  const g=k=>{const x=(S.scn||{})[k]||{n:0,c:0};return x},pct=x=>x.n?Math.round(x.c/x.n*100):0,a=g('A'),b=g('B'),c=g('C'),d=g('D');
+  return [
+    {t:`短碼：推或棄牌＋面對全下 合計至少 30 題、正確率 ≥ 75%（目前 ${a.n+b.n} 題，${pct({n:a.n+b.n,c:a.c+b.c})}%）`,ok:a.n+b.n>=30&&(a.c+b.c)/(a.n+b.n)>=.75},
+    {t:`常碼翻後下注：至少 15 題、正確率 ≥ 70%（目前 ${c.n} 題，${pct(c)}%）`,ok:c.n>=15&&c.c/c.n>=.7},
+    {t:`尺度解讀：至少 20 題、正確率 ≥ 70%（目前 ${d.n} 題，${pct(d)}%）`,ok:d.n>=20&&d.c/d.n>=.7}
+  ];
+};
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
 const UA=navigator.userAgent;
