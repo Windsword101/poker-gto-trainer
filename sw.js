@@ -1,5 +1,5 @@
 // 離線快取：預先快取核心檔案，之後優先用快取，背景更新。發版時請調高 VERSION。
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = 'gto-trainer-' + VERSION;
 const ASSETS = [
   './',

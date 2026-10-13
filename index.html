@@ -141,6 +141,41 @@ details.adv summary{cursor:pointer;color:var(--acc);margin:6px 0}.adv-body{margi
  .t9 .mc{width:15px;height:21px;line-height:21px;font-size:8px}.t9 .la{font-size:9px}.t9 .bet{font-size:10px}
 }
 
+/* 對戰頁：底部操作區、彈出視窗 */
+.simtop{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:8px}
+.simtop .row1{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.simtop .b{margin:2px 4px 2px 0;padding:7px 12px;font-size:13px}.simtop .ib{padding:7px 10px;margin:2px 0 2px 4px;font-size:15px}
+.simtop .st{margin-top:2px;font-size:12px}
+.tline{background:#143049;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;margin-bottom:8px;cursor:pointer}
+.tdetail{margin:-4px 0 8px;font-size:12px}
+.dock{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:14px}
+.abar3{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}.abar3 .b{margin:0;padding:11px 8px;font-size:15px}
+.rzbox .b.big{width:100%;margin:6px 0 0}
+.dock .res{margin:0 0 8px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);border:1px solid var(--line);width:100%;max-width:720px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+.sheethead{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-12px;background:var(--bg);padding:6px 0;margin-bottom:6px;z-index:2}
+@media(min-width:821px){.modal{align-items:center}.sheet{border-radius:16px}}
+@media(max-width:820px){
+ body.simfull{overflow:hidden}
+ body.simfull header,body.simfull #subnav,body.simfull #installBanner{display:none}
+ body.simfull main{padding:6px 8px 0;margin:0;max-width:none;height:calc(100vh - 66px);height:calc(100dvh - 66px - env(safe-area-inset-bottom))}
+ body.simfull #t-sim.on{display:flex;flex-direction:column;height:100%;gap:0;overflow:hidden}
+ body.simfull #t-sim .simtop{margin-bottom:4px;padding:5px 8px}
+ body.simfull #t-sim .tline{margin-bottom:4px}
+ body.simfull #t-sim .tbl{flex:1 1 0;min-height:190px;aspect-ratio:auto;width:100%;max-width:none;margin:0 0 4px}
+ body.simfull #t-sim .dock{flex:0 0 auto;max-height:46%;overflow:auto;margin:0 0 4px;padding:8px}
+ .hint:not(.open){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+ .hint{font-size:13px;padding:7px 9px}
+ .rzbox{display:none}.rzbox.open{display:block}
+ .infobar{flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px}.ic{flex:0 0 auto;padding:3px 8px}.ic b{font-size:13px}
+ .felt{inset:6% 3%}
+}
+@media(max-width:820px) and (max-height:700px){
+ .seat{width:80px;font-size:9px}.hole .card{min-width:24px;font-size:11px;padding:2px 1px}.mc{width:16px;height:22px;line-height:22px;font-size:9px}
+ .t9 .seat{width:66px}.t9 .hole .card{min-width:18px;font-size:9px}.potl{padding:1px 8px;font-size:12px;margin-bottom:3px}.board .card{min-width:26px;font-size:12px;padding:3px 1px}
+}
+
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
 body{padding-bottom:env(safe-area-inset-bottom)}
@@ -2113,6 +2148,133 @@ pracList=function(l){
   if(l===10){P.push({t:`打完 3 場以上錦標賽（目前 ${sh.length} 場）`,ok:sh.length>=3});P.push({t:`進入獎金圈至少 1 次（目前 ${sh.filter(paid).length} 次）`,ok:sh.filter(paid).length>=1})}
   return P;
 };
+
+/* ============ 對戰介面：單螢幕（手機）、底部操作區、彈出式檢討 ============ */
+function openSheet(k){G.sheet=k;renderSim()}
+function closeSheet(){G.sheet=null;renderSim()}
+function toggleRaise(){G.raiseAt=(G.raiseAt===G.decisions.length)?-1:G.decisions.length;renderSim()}
+function toggleHintOpen(){G.hintOpen=!G.hintOpen;renderSim()}
+function toggleT(){G.tOpen=!G.tOpen;renderSim()}
+const _showBase=show;
+show=function(id){
+  _showBase(id);
+  document.body.classList.toggle('simfull',id==='t-sim'&&innerWidth<=820);
+};
+window.addEventListener('resize',()=>{
+  const on=document.querySelector('section.on');
+  document.body.classList.toggle('simfull',!!on&&on.id==='t-sim'&&innerWidth<=820);
+  if(on&&on.id==='t-sim'&&G)renderSim();
+});
+function tbarHTML(){
+  if(!(SIM.mode==='sng'&&TN))return '';
+  const lv=BLIND_LEVELS[TN.level],nx=BLIND_LEVELS[Math.min(TN.level+1,BLIND_LEVELS.length-1)],n=SIM.n;
+  const alive=TN.chips.map((c,k)=>k).filter(k=>TN.chips[k]>1e-6),eq=icmEq(TN.chips,TN.payouts),tot=TN.chips.reduce((a,b)=>a+b,0);
+  const sorted=alive.slice().sort((a,b)=>TN.chips[b]-TN.chips[a]),rank=sorted.indexOf(0)+1;
+  const line=`<div class="tline" onclick="toggleT()">🏆 剩 ${alive.length}/${n}｜盲注 ${lv[0]}/${lv[1]}｜你 ${Math.round(TN.chips[0])}（${(TN.chips[0]/lv[1]).toFixed(0)}bb）｜${TN.chips[0]>1e-6?'第 '+rank+' 名':'已淘汰'} ${G.tOpen?'▴':'▾'}</div>`;
+  if(!G.tOpen)return line;
+  const rows=sorted.map(k=>`<tr><td>${k===0?'<b>你</b>':SEATN[k]}</td><td>${Math.round(TN.chips[k])}</td><td>${(TN.chips[k]/lv[1]).toFixed(1)}bb</td><td>${(TN.chips[k]/tot*100).toFixed(1)}%</td><td><b>${eq[k].toFixed(1)}</b></td></tr>`).join('');
+  return line+`<div class="res tdetail">獎金（買入 100）前 ${TN.payouts.length} 名：${TN.payouts.join(' / ')}｜${Math.max(0,SIM.levelHands-TN.handsInLevel)} 手後升到 ${nx[0]}/${nx[1]}
+    <table class="t"><tr><th>玩家</th><th>籌碼</th><th>bb</th><th>佔比</th><th>ICM 價值</th></tr>${rows}</table>
+    <div class="mut">ICM 價值＝以籌碼比例估算每人的獎金期望；籌碼多的人，每個籌碼的價值會遞減。</div></div>`;
+}
+function renderSim(){
+  const el=$('t-sim');if(!G){el.innerHTML='';return}
+  const sng=SIM.mode==='sng'&&TN,N=SIM.n;
+  const hero=G.players[0],heroTurn=!G.over&&G.cur===0,toCall=Math.min(G.curBet-hero.bet,hero.stack);
+  const finished=sng?(TN.over&&G.over):(SIM.hands>=SIM.max&&G.over);
+  const pot=potNow(),streetName=['翻前','翻牌','轉牌','河牌'][G.street];
+  const L9=N===9?seatLayout(N):null;
+  /* ---- 牌桌 ---- */
+  const seats=G.players.map((p,k)=>{
+    const cls=['seat'];if(!L9)cls.push('s'+k);
+    if(p.folded)cls.push('fold');if(!G.over&&G.cur===k)cls.push('act');if(G.over&&G.winners.includes(k))cls.push('win');
+    const st=L9?` style="left:${L9[k].x.toFixed(1)}%;top:${L9[k].y.toFixed(1)}%"`:'';
+    if(p.dead)return `<div class="${cls.join(' ')}"${st}><div class="box"><div class="nm">${p.name}</div><div class="stk" style="color:#8b9bab">淘汰${TN&&TN.place[k]?'（第 '+TN.place[k]+' 名）':''}</div></div></div>`;
+    const showCards=k===0||(G.reveal&&!p.folded);
+    let cards='';
+    if(k===0)cards=`<div class="hole">${cardsHTML(p.cards).replace(/class="card /g,G.holeAnim?'class="card deal ':'class="card ')}</div>`;
+    else if(!p.folded)cards=`<div class="hole">${p.cards.map(c=>miniCard(c,!showCards,G.holeAnim)).join('')}</div>`;
+    let hn='';
+    if(G.reveal&&!p.folded)hn=`<div class="hn">${HAND_NAMES[Math.floor(eval7([...p.cards,...G.full])/371293)]}</div>`;
+    const lastTxt=p.folded?'棄牌':(G.last[k]||'');
+    const win=G.over&&G.winners.includes(k)?`<div class="winl">WIN +${fmt(G.pay[k]-p.total)}</div>`:'';
+    return `<div class="${cls.join(' ')}"${st}>${cards}${hn}<div class="box"><div class="nm">${p.name} <span class="pos">${posName(k)}</span></div><div class="stk">${fmt(p.stack)} bb</div></div><div class="hud">${hudText(k)}</div><div class="la">${lastTxt}</div>${win}</div>`;
+  }).join('');
+  const bets=G.players.map((p,k)=>{
+    if(!(p.bet>0))return '';
+    const st=L9?` style="left:${L9[k].bx.toFixed(1)}%;top:${L9[k].by.toFixed(1)}%"`:'';
+    return `<div class="bet${L9?'':' b'+k}${G.pbets[k]!==p.bet?' pop':''}"${st}><i></i>${fmt(p.bet)}</div>`;
+  }).join('');
+  const board=[0,1,2,3,4].map(i=>G.board[i]!==undefined?(i>=G.pb?dealCls(cardHTML(G.board[i])):cardHTML(G.board[i])):G.over?cardHTML(G.full[i]).replace('class="card ','class="card dim '):'<span class="card ph"></span>').join('');
+  const dstyle=L9?` style="left:${L9[SIM.btn].dx.toFixed(1)}%;top:${L9[SIM.btn].dy.toFixed(1)}%"`:'';
+  const table=`<div class="tbl${L9?' t9':''}"><div class="felt"></div>${seats}${bets}<div class="dbtn${L9?'':' d'+SIM.btn}"${dstyle}>D</div>
+    <div class="center"><div class="potl"><i></i>底池 ${fmt(pot)} bb</div><div class="board">${board}</div><div class="stl">${streetName}${G.over&&G.board.length<5?' ｜ 灰色為未發出的牌':''}</div></div></div>`;
+  /* ---- 底部操作區 ---- */
+  let hint='',ctl='',info='',resline='';
+  if(heroTurn){
+    if(SIM.info&&G.info)info=infoHTML();
+    let tip='';
+    if(SIM.hint&&SIM.reveal){const v=mainVillain();if(v>0&&SIM.styles[v])tip=`<br><b>剝削建議</b>（${G.players[v].name}｜${STYLE_LBL[SIM.styles[v]]}）：${STYLE_TIP[SIM.styles[v]]}`}
+    hint=SIM.hint?`<div class="res hint${G.hintOpen?' open':''}" onclick="toggleHintOpen()"><b>GTO 提示${sng?'（含 ICM）':''}</b>　${G.adv.text}${tip}</div>`
+      :`<div class="res warn hint open">無提示模式：自行決定，賽後會顯示建議對照。</div>`;
+    const cr=canRaise(0),full=hero.bet+hero.stack,min=Math.min(G.curBet+G.minRaise,full),ps=presets();
+    const init=Math.max(min,Math.min(full,ps.length?ps[0][1]:min)),open=G.raiseAt===G.decisions.length;
+    ctl=`${SIM.timerOn?'<div class="tmr"><i style="animation-duration:20s"></i></div>':''}
+    <div class="abar3"><button class="b r" onclick="heroAct('f')" ${toCall>0?'':'disabled'}>棄牌</button>
+    <button class="b g" onclick="heroAct('c')">${toCall>0?'跟注 '+fmt(toCall)+(toCall>=hero.stack?'（全下）':''):'過牌'}</button>
+    ${cr?`<button class="b ${open?'':'s'}" onclick="toggleRaise()">${G.curBet>0?'加注':'下注'} ${open?'▴':'▾'}</button>`:''}</div>
+    ${cr?`<div class="rzbox${open?' open':''}"><div class="qb">${ps.map(([t,v])=>`<button class="b s" onclick="setRz(${v})">${t}</button>`).join('')}<button class="b s" onclick="setRz(${full})">全下</button></div>
+      <input type="range" id="rz" min="${min}" max="${full}" step="0.5" value="${init}" oninput="$('rzv').textContent=fmt(+this.value)+' bb'">
+      <button class="b big" onclick="heroRaise()">${G.curBet>0?'加注到':'下注'} <span id="rzv">${fmt(init)} bb</span></button></div>`:''}`;
+  }else if(!G.over)ctl=`<div class="mut wait">等待其他玩家行動…</div>`;
+  if(G.over){
+    let fin='';
+    if(finished&&sng){
+      const pz=TN.prize[0]||0;
+      fin=`<div class="res ${TN.heroPlace<=TN.payouts.length?'ok':'bad'}"><b>🏁 錦標賽結束：第 ${TN.heroPlace} 名</b>｜獎金 ${pz}（買入 100，${pz>100?'獲利 +'+(pz-100):pz===100?'持平':'虧損 '+(pz-100)}）｜共 ${SIM.hands} 手｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):0}%${SIM.reveal?'':'<br>對手風格：'+SIM.styles.slice(1).map((s,k)=>`${SEATN[k+1]} ${STYLE_LBL[s]}`).join('、')}</div>`;
+    }else if(finished){
+      fin=`<div class="res"><b>比賽結束</b>：${SIM.hands} 手，淨收益 ${SIM.net>=0?'+':''}${fmt(SIM.net)} bb（${(SIM.net/SIM.hands*100).toFixed(1)} bb/100）｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):0}%${SIM.reveal?'':'<br>對手風格：'+SIM.styles.slice(1).map((s,k)=>`${SEATN[k+1]} ${STYLE_LBL[s]}`).join('、')}</div>`;
+    }
+    const bust=sng&&TN.bustedNow&&TN.bustedNow.length&&!TN.over?`　<span class="mut">淘汰：${TN.bustedNow.map(k=>`${SEATN[k]}（第 ${TN.place[k]} 名）`).join('、')}</span>`:'';
+    resline=`<div class="res ${G.net>=0?'ok':'bad'}"><b>本手 ${G.net>=0?'+':''}${fmt(G.net)} bb</b>${bust}</div>${fin}
+    <div class="abar3">${finished?(sng?'<button class="b big" onclick="newMatch()">再打一場錦標賽</button>':''):'<button class="b g big" onclick="newHand()">下一手牌</button>'}
+    <button class="b s" onclick="openSheet(\'review\')">🔍 本手檢討</button></div>`;
+  }
+  /* ---- 彈出視窗 ---- */
+  let sheet='';
+  const head=t=>`<div class="sheethead"><b>${t}</b><button class="b s" onclick="closeSheet()">✕ 關閉</button></div>`;
+  if(G.sheet==='review'&&G.over){
+    const lines=G.decisions.map(d=>`<tr><td>${['翻前','翻牌','轉牌','河牌'][d.street]}</td><td>${d.ok?'✔':'✘'}</td><td>你選：${CATN[d.cat]}${d.ok?'':'（建議：'+CATN[d.best]+'）'}</td><td class="mut">${d.text}</td></tr>`).join('');
+    sheet=`<div class="modal" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">${head('本手檢討')}
+      <div class="res ${G.net>=0?'ok':'bad'}"><b>本手結果：${G.net>=0?'+':''}${fmt(G.net)} bb</b></div>
+      ${lines?`<h2 style="margin-top:10px">本手決策檢討（建議頻率 ≥15% 視為符合）</h2><table class="t">${lines}</table>`:'<div class="mut" style="margin-top:8px">這手沒有需要你決策的動作。</div>'}
+      <button class="b s" onclick="toggleAll()">${G.showAll?'收起所有人的牌與分析':'🔍 看所有人的牌與位置分析'}</button>${G.showAll&&G.review?reviewHTML(G.review,G.decisions):''}
+      <div style="margin-top:8px"><button class="b s" onclick="closeSheet();show('t-hist')">看手牌歷史</button></div></div></div>`;
+  }else if(G.sheet==='log'){
+    sheet=`<div class="modal" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">${head('牌局紀錄')}<div class="mut">${G.log.slice().reverse().map(x=>`<div>${x}</div>`).join('')}</div></div></div>`;
+  }else if(G.sheet==='set'){
+    const T_=(k,l,on)=>`<button class="b ${on?'':'s'}" onclick="${k}">${on?'✔ ':''}${l}</button>`;
+    sheet=`<div class="modal" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">${head('桌型・賽制・設定')}
+      <div class="topbar2"><select id="s-tn"><option value="6" ${N===6?'selected':''}>6 人桌</option><option value="9" ${N===9?'selected':''}>9 人桌</option></select>
+        <select id="s-tm"><option value="cash" ${SIM.mode==='cash'?'selected':''}>現金桌（每手重置 100bb）</option><option value="sng" ${SIM.mode==='sng'?'selected':''}>錦標賽 SNG（盲注遞增、有獎金）</option></select></div>
+      <div>${SIM.mode==='cash'?T_("setFlop(!SIM.flop)",'從翻牌開始',SIM.flop):''}${T_("tog('info')",'即時資訊',SIM.info)}${T_("tog('reveal')",'顯示對手風格',SIM.reveal)}${T_("tog('sound')",'🔊 音效',SIM.sound)}${T_("tog('timerOn')",'⏱ 20 秒倒數',SIM.timerOn)}</div>
+      <div style="margin-top:6px">${SIM.mode==='cash'?`比賽手數：<select id="s-max" style="width:auto">${[10,20,30,50,100].map(n=>`<option ${n===SIM.max?'selected':''}>${n}</option>`).join('')}</select>`:`升盲速度：<select id="s-lh" style="width:auto">${[5,8,12].map(n=>`<option value="${n}" ${n===SIM.levelHands?'selected':''}>每 ${n} 手升一級</option>`).join('')}</select>`}（更改後請按「重新開始」）</div>
+      <div class="mut" style="margin-top:8px">現金桌每手重置為 100bb；錦標賽起始 1500 籌碼，盲注 10/20 起，無前注，打到你被淘汰或只剩一人為止。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你。提示依範圍表與蒙地卡羅估算，非即時求解器輸出。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div>
+      <button class="b big" style="margin-top:10px" onclick="newMatch()">套用並重新開始</button></div></div>`;
+  }
+  const counter=sng?`第 ${SIM.hands+(G.over?0:1)} 手｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):'—'}%`:
+    `第 ${Math.min(SIM.hands+(G.over?0:1),SIM.max)}/${SIM.max} 手｜淨收益 ${SIM.net>=0?'+':''}${fmt(SIM.net)}bb｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):'—'}%`;
+  el.innerHTML=`<div class="simtop"><div class="row1"><div><button class="b ${SIM.hint?'':'s'}" onclick="setHint(true)">GTO 提示</button><button class="b ${SIM.hint?'s':''}" onclick="setHint(false)">無提示</button></div>
+    <div><button class="b s ib" onclick="openSheet('set')" title="設定">⚙</button><button class="b s ib" onclick="openSheet('log')" title="牌局紀錄">📜</button><button class="b s ib" onclick="newMatch()" title="重新開始">↻</button></div></div>
+    <div class="mut st">${counter}</div></div>
+  ${tbarHTML()}
+  ${table}
+  <div class="dock">${info}${hint}${ctl}${resline}</div>${sheet}`;
+  if($('s-tn')){$('s-tn').onchange=e=>setTable(+e.target.value);$('s-tm').onchange=e=>setMode(e.target.value)}
+  if($('s-max'))$('s-max').onchange=e=>{SIM.max=+e.target.value;renderSim()};
+  if($('s-lh'))$('s-lh').onchange=e=>{SIM.levelHands=+e.target.value;renderSim()};
+  G.pb=G.board.length;G.pbets=G.players.map(p=>p.bet);G.holeAnim=false;
+}
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
 const UA=navigator.userAgent;
