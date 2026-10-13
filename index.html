@@ -711,7 +711,7 @@ function postAdvice(i){
     size=Math.max(1,round2(frac*pot));extra=`尚無人下注`;
   }
   const text=`勝率 ≈ ${pc(eq)}（對手範圍估計${opps.length>1?'，多人底池已折減':''}）｜${extra}｜加注/下注 ${pc(acts.r)} ／ ${facing?'跟注':'過牌'} ${pc(acts.c)} ／ 棄牌 ${pc(acts.f)}`+(acts.r>0?`｜建議尺碼到 ${size}bb`:'');
-  return {acts,size,text};
+  return {acts,size,text,eq};
 }
 const advise=i=>G.street===0?pfAdvice(i):postAdvice(i);
 
@@ -719,7 +719,7 @@ const advise=i=>G.street===0?pfAdvice(i):postAdvice(i);
 function post(i,a){const p=G.players[i];p.stack-=a;p.bet=a;p.total=a}
 function newHand(){
   clearTimeout(SIM.timer);if(G)clearTimeout(G.hTimer);let fl=null;if(SIM.flop){fl=pickFlopRoles();SIM.btn=fl.btn}else SIM.btn=(SIM.btn+1)%6;const d=shuffled(52);
-  G={players:[],full:d.slice(12,17),board:[],street:0,curBet:1,minRaise:1,over:false,reveal:false,pf:{raises:0,opener:-1,last:-1},pfMap:[],rng:[],decisions:[],log:[],last:[],winners:[],win:0,flags:[],pb:0,pbets:[],holeAnim:true,info:null,hTimer:0,cur:0,adv:null,msg:''};
+  G={players:[],full:d.slice(12,17),board:[],street:0,curBet:1,minRaise:1,over:false,reveal:false,pf:{raises:0,opener:-1,last:-1},pfMap:[],rng:[],decisions:[],log:[],last:[],winners:[],win:0,flags:[],rec:[],seen:{},review:null,showAll:false,pb:0,pbets:[],holeAnim:true,info:null,hTimer:0,cur:0,adv:null,msg:''};
   for(let i=0;i<6;i++)G.players.push({name:SEATN[i],stack:100,bet:0,total:0,folded:false,allin:false,acted:false,cards:[d[2*i],d[2*i+1]]});
   SIM.stats.forEach(s=>s.h++);sfx('deal');post((SIM.btn+1)%6,0.5);post((SIM.btn+2)%6,1);G.cur=(SIM.btn+3)%6;
   slog(`第 ${SIM.hands+1} 手：按鈕 ${SEATN[SIM.btn]}`);if(fl)return setupFlop(fl);step();
@@ -765,6 +765,7 @@ function perform(i,cat,adv,to){
   if(cat==='f'&&!facing)cat='c';
   if(cat==='r'&&!canRaise(i))cat='c';
   const fl2=G.flags[i]||(G.flags[i]={}),stt=SIM.stats[i];
+  (G.rec[i]||(G.rec[i]=[])).push({s:G.street,cat,ok:adv&&adv.acts?adv.acts[cat]>=0.15:null,text:(adv&&adv.text)||''});
   if(cat==='f'){p.folded=true;sfx('fold');G.last[i]='棄牌';slog(`${nm} 棄牌`)}
   else if(cat==='c'){
     p.stack-=toCall;p.bet+=toCall;p.total+=toCall;if(p.stack<=1e-9){p.stack=0;p.allin=true}p.acted=true;
@@ -798,7 +799,7 @@ function after(i){
 function endStreet(){
   G.players.forEach(p=>{p.bet=0;p.acted=false});G.curBet=0;G.minRaise=1;G.last=[];
   if(G.street===3)return showdown();
-  G.street++;G.board=G.full.slice(0,[0,3,4,5][G.street]);sfx('deal');
+  G.street++;G.board=G.full.slice(0,[0,3,4,5][G.street]);sfx('deal');G.seen[G.street]=G.players.map((p,k)=>k).filter(k=>!G.players[k].folded);
   if(G.street===1)G.players.forEach((p,k)=>{if(!p.folded){const m=G.pfMap[k];G.rng[k]=expand(m&&m.size?m:ALLMAP)}});
   slog(`—— ${['','翻牌','轉牌','河牌'][G.street]}：${G.board.map(cardStr).join(' ')}（底池 ${fmt(potNow())}bb）`);
   const can=G.players.filter(p=>!p.folded&&!p.allin);
@@ -815,7 +816,7 @@ function showdown(){
 function finish(winners,sd){
   const pot=potNow();winners.forEach(k=>G.players[k].stack+=pot/winners.length);
   G.over=true;G.winners=winners.slice();G.win=pot/winners.length;G.net=G.players[0].stack-100;SIM.hands++;SIM.net+=G.net;
-  slog(`${sd?'攤牌：':''}${winners.map(k=>G.players[k].name).join('、')} 贏得 ${fmt(pot/winners.length)}bb`);clearTimeout(G.hTimer);saveHand(sd);
+  slog(`${sd?'攤牌：':''}${winners.map(k=>G.players[k].name).join('、')} 贏得 ${fmt(pot/winners.length)}bb`);clearTimeout(G.hTimer);G.review=buildReview();saveHand(sd);
   render();
 }
 /* ---- 你的操作 ---- */
@@ -823,7 +824,7 @@ function heroAct(cat,to){
   if(G.over||G.cur!==0)return;
   const adv=G.adv,ok=adv.acts[cat]>=0.15;
   clearTimeout(G.hTimer);const best=['f','c','r'].reduce((b,k)=>adv.acts[k]>adv.acts[b]?k:b,'c');
-  G.decisions.push({street:G.street,cat,ok,text:adv.text,best,acts:adv.acts});
+  G.decisions.push({street:G.street,cat,ok,text:adv.text,best,acts:adv.acts,eq:adv.eq});
   SIM.fol.n++;if(ok)SIM.fol.c++;
   perform(0,cat,adv,to);
 }
@@ -929,8 +930,8 @@ function mainVillain(){
 function saveHand(sd){
   const p=G.players[0];
   const rec={n:(SIM.hist.length?SIM.hist[SIM.hist.length-1].n:0)+1,t:Date.now(),pos:posName(0),hole:p.cards.slice(),board:G.board.slice(),full:G.full.slice(),
-    net:G.net,sd,flop:SIM.flop,log:G.log.slice(),dec:G.decisions.map(d=>({s:d.street,cat:d.cat,ok:d.ok,best:d.best,text:d.text})),
-    opp:G.players.map((q,k)=>k&&!q.folded&&sd?q.cards.slice():null),styles:SIM.styles.slice(),star:false};
+    net:G.net,sd,flop:SIM.flop,log:G.log.slice(),dec:G.decisions.map(d=>({s:d.street,cat:d.cat,ok:d.ok,best:d.best,text:d.text,eq:d.eq})),
+    opp:G.players.map((q,k)=>k&&!q.folded&&sd?q.cards.slice():null),styles:SIM.styles.slice(),review:G.review,star:false};
   SIM.hist.push(rec);if(SIM.hist.length>200)SIM.hist.shift();saveHist();
   if(G.net>0)sfx('win');else if(G.net<0&&sd)sfx('lose');
 }
@@ -1058,6 +1059,7 @@ function renderSim(){
     const lines=G.decisions.map(d=>`<tr><td>${['翻前','翻牌','轉牌','河牌'][d.street]}</td><td>${d.ok?'✔':'✘'}</td><td>你選：${CATN[d.cat]}${d.ok?'':'（建議：'+CATN[d.best]+'）'}</td><td class="mut">${d.text}</td></tr>`).join('');
     rev=`<div class="res ${G.net>=0?'ok':'bad'}"><b>本手結果：${G.net>=0?'+':''}${fmt(G.net)} bb</b></div>
     ${lines?`<h2 style="margin-top:10px">本手決策檢討（建議頻率 ≥15% 視為符合）</h2><table class="t">${lines}</table>`:''}
+    <button class="b s" onclick="toggleAll()">${G.showAll?'收起所有人的牌與分析':'🔍 看所有人的牌與位置分析'}</button>${G.showAll&&G.review?reviewHTML(G.review,G.decisions):''}
     ${finished?`<div class="res"><b>比賽結束</b>：${SIM.hands} 手，淨收益 ${SIM.net>=0?'+':''}${fmt(SIM.net)} bb（${(SIM.net/SIM.hands*100).toFixed(1)} bb/100）｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):0}%${SIM.reveal?'':'<br>對手風格：'+[1,2,3,4,5].map(k=>`${SEATN[k]} ${STYLE_LBL[SIM.styles[k]]}`).join('、')}</div>`:''}
     ${finished?'':'<button class="b big" onclick="newHand()">下一手牌</button>'}
     <button class="b s" onclick="show('t-hist')">看手牌歷史</button>`;
@@ -1407,6 +1409,86 @@ function submitQuiz(){
   $('qres').innerHTML=`<div class="res ${pass?'ok':'bad'}"><b>${ok}/${CV.qs.length} 題答對</b>：${pass?'本課完成！':'再試一次，答對 '+need+' 題以上即可完成。'}</div>`;
   $('qsub').disabled=true;
 }
+
+/* ============ 本手檢討：所有人的牌、位置分析、實際勝率 ============ */
+const POS_NOTE={
+  UTG:'最前位：後面還有 5 人未行動，範圍最緊；翻後多半沒有位置。',
+  HJ:'中位：範圍略寬於 UTG。',
+  CO:'按鈕前一位：範圍偏寬，常用來偷盲；翻後只輸給按鈕位。',
+  BTN:'按鈕位（莊位）：翻後最後行動，位置優勢最大，開池範圍最寬。',
+  SB:'小盲：已投 0.5bb，但翻後最先行動（最不利），面對開池傾向 3-bet 或棄牌。',
+  BB:'大盲：已投 1bb，面對開池價格最便宜，防守範圍最寬；但翻後沒有位置。'
+};
+function eqMulti(hands,board,iters){
+  const used=new Set(board);hands.forEach(h=>h.forEach(c=>used.add(c)));
+  const base=[];for(let c=0;c<52;c++)if(!used.has(c))base.push(c);
+  const need=5-board.length,res=hands.map(()=>0);
+  for(let i=0;i<iters;i++){
+    const d=base.slice(),bd=board.slice();
+    for(let k=0;k<need;k++){const j=k+((Math.random()*(d.length-k))|0);const t=d[k];d[k]=d[j];d[j]=t;bd.push(d[k])}
+    let best=-1,w=[];
+    hands.forEach((h,x)=>{const sc=eval7([...h,...bd]);if(sc>best){best=sc;w=[x]}else if(sc===best)w.push(x)});
+    w.forEach(x=>{res[x]+=1/w.length});
+  }
+  return res.map(r=>r/iters);
+}
+function buildReview(){
+  const pl=G.players.map((p,k)=>({k,n:p.name,pos:posName(k),cards:p.cards.slice(),fold:p.folded,style:k?SIM.styles[k]:null,
+    acts:(G.rec[k]||[]).map(a=>({s:a.s,cat:a.cat,ok:a.ok,text:a.text}))}));
+  const eq={};
+  for(const s of [0,1,2,3]){
+    const idx=G.seen[s>0?s:1];if(!idx||idx.length<2)continue;
+    const board=G.full.slice(0,[0,3,4,5][s]);
+    eq[s]={idx:idx.slice(),v:eqMulti(idx.map(k=>G.players[k].cards),board,1500)};
+  }
+  return {pl,eq};
+}
+function reviewHTML(rv,decs){
+  const pc=x=>Math.round(x*100)+'%',ST=['翻前','翻牌','轉牌','河牌'];
+  const seenFlop=rv.eq[1]?rv.eq[1].idx:rv.pl.map(p=>p.k).filter(k=>!rv.pl[k].fold);
+  const order=seenFlop.slice().sort((a,b)=>PRANK[rv.pl[a].pos]-PRANK[rv.pl[b].pos]);
+  const ipK=order.length>1?order[order.length-1]:null;
+  const hero=rv.pl[0];
+  const rows=rv.pl.map(p=>{
+    const lbl=p.style&&SIM.reveal?` <span class="tag">${STYLE_LBL[p.style]}</span>`:'';
+    const st=p.fold?'棄牌':'打到最後';
+    const ip=order.includes(p.k)?(p.k===ipK?'有位置（最後行動）':order.length>1?'沒位置':''):'—';
+    return `<tr><td>${p.k===0?'<b>你</b>':p.n}${lbl}</td><td><b>${p.pos}</b></td><td><div class="hole" style="justify-content:flex-start">${p.cards.map(c=>miniCard(c,false,false)).join('')}</div></td><td>${handLabel(p.cards[0],p.cards[1])}</td><td>${st}</td><td>${ip}</td></tr>`;
+  }).join('');
+  const eqRows=Object.keys(rv.eq).map(s=>{
+    const e=rv.eq[s];const lab=+s===0?'翻前（只含看到翻牌的人）':ST[s]+'發出後';
+    return `<tr><td>${lab}</td><td>${e.idx.map((k,x)=>`${k===0?'你':rv.pl[k].n} <b>${pc(e.v[x])}</b>`).join(' ｜ ')}</td></tr>`;
+  }).join('');
+  const dsStreet=d=>d.street!==undefined?d.street:d.s;
+  const cmp=(decs||[]).filter(d=>d.eq!==undefined&&d.eq!==null&&rv.eq[dsStreet(d)]).map(d=>{
+    const e=rv.eq[dsStreet(d)],x=e.idx.indexOf(0);if(x<0)return '';
+    const real=e.v[x],diff=Math.abs(real-d.eq)*100;
+    return `<div>${ST[dsStreet(d)]}：提示估計 <b>${pc(d.eq)}</b>（對手範圍） vs 對實際手牌 <b>${pc(real)}</b>　<span class="mut">${diff<=8?'接近':'差距較大，主要來自對手實際手牌與範圍平均的差異'}</span></div>`;
+  }).join('');
+  const acts=rv.pl.map(p=>{
+    if(!p.acts.length)return '';
+    return `<tr><td colspan="4" style="background:#1d2d40"><b>${p.k===0?'你':p.n}（${p.pos}）</b>${p.style&&SIM.reveal?` <span class="tag">${STYLE_LBL[p.style]}</span>`:''}</td></tr>`+
+      p.acts.map(a=>`<tr><td>${ST[a.s]}</td><td>${CATN[a.cat]}</td><td>${a.ok===null?'—':a.ok?'✔ 符合':'✘ 偏離'+(p.k&&p.style&&p.style!=='gto'?'（風格：'+STYLE_LBL[p.style]+'）':'')}</td><td class="mut">${a.text||''}</td></tr>`).join('');
+  }).join('');
+  return `<div class="res" style="margin-top:10px"><b>🔍 所有人的牌與位置分析</b>
+  <table class="t" style="margin-top:6px"><tr><th>玩家</th><th>位置</th><th>手牌</th><th>類型</th><th>結果</th><th>翻後位置</th></tr>${rows}</table>
+  <div class="mut" style="margin-top:6px">你的位置：<b>${hero.pos}</b>。${POS_NOTE[hero.pos]||''}</div>
+  ${eqRows?`<h3 style="margin:12px 0 4px;font-size:14px">各街實際勝率（對照所有人的真實手牌）</h3><table class="t">${eqRows}</table>`:'<div class="mut" style="margin-top:6px">這手牌在翻牌前就結束，沒有翻後勝率可顯示。</div>'}
+  ${cmp?`<h3 style="margin:12px 0 4px;font-size:14px">你的提示估計 vs 實際勝率</h3>${cmp}`:''}
+  ${acts?`<h3 style="margin:12px 0 4px;font-size:14px">每位玩家的動作與 GTO 對照（建議頻率 ≥15% 視為符合）</h3><table class="t">${acts}</table><div class="mut">對手的實際動作含風格偏離；此處「建議」是同一套近似策略，不是求解器輸出。</div>`:''}
+</div>`;
+}
+function toggleAll(){G.showAll=!G.showAll;renderSim()}
+const _renderReplay=renderReplay;
+renderReplay=function(){
+  _renderReplay();
+  const r=SIM.hist[HR.i];
+  if(r&&r.review){
+    const d=document.createElement('details');d.className='adv';
+    d.innerHTML='<summary>🔍 所有人的牌與位置分析</summary>'+reviewHTML(r.review,r.dec);
+    const p=document.querySelector('#h-rep .panel');if(p)p.appendChild(d);
+  }
+};
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
 const UA=navigator.userAgent;
