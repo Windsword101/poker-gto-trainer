@@ -240,6 +240,17 @@ table.grid td.pick{outline:2px solid #ffd54a;outline-offset:-2px;position:relati
 .poschips .b.on{background:var(--acc);color:#04121f}
 @media(max-width:640px){table.grid td{font-size:clamp(9px,2.9vw,13px)}}
 .pdiag .seat.opp .box{border-color:#d9534f;box-shadow:0 0 12px rgba(217,83,79,.7);background:#2a1414}
+.eqmode{display:flex;gap:6px;margin-bottom:8px}.eqmode .b{margin:0;flex:1;min-height:40px}
+.ocgrid{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;margin:6px 0;max-width:620px}
+.oc{aspect-ratio:3/4;padding:0;border-radius:5px;border:1px solid #bbb;background:#f4f4f0;color:#111;font-weight:700;font-size:clamp(10px,2.8vw,15px);line-height:1.05;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.oc.r{color:#c0272d}.oc small{font-size:.85em}
+.oc.seen{background:#243140;color:#5c6b7a;border-color:#243140;cursor:default}
+.oc.sel{outline:3px solid #2ea66a;outline-offset:-1px;background:#d6f5e3}
+.oc.good{background:#8be6b0}.oc.wrong{background:#ffb3b0;outline-color:#d9534f}
+.oc.miss{outline:3px solid #ffd54a;outline-offset:-1px}
+.ocinfo{margin:6px 0;font-size:14px}
+.ocf{margin-top:10px;background:#0f1720}
+.ocf input{background:#0f1720;color:#fff;border:1px solid var(--line);border-radius:6px;padding:6px}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -3675,6 +3686,141 @@ renderLearn=function(){
   box.innerHTML=faceDiagram(sc.hero,sc.opp,m?m[1]:'加注');
   const cards=host.parentNode.querySelector('.cards');
   if(cards)cards.parentNode.insertBefore(box.firstElementChild,cards);
+};
+
+/* ===== 勝率預測：Outs 教練（自己數 outs → 套 2／4 口訣 → 對照精確機率）===== */
+let EQM='est',oc=null;
+const SUIT_NAME={s:'黑桃',h:'紅心',d:'方塊',c:'梅花'};
+function hasStr(cs){
+  const m=new Set(cs.map(x=>x%13));if(m.has(12))m.add(-1);
+  for(let lo=-1;lo<=8;lo++){let ok=true;for(let k=0;k<5;k++)if(!m.has(lo+k)){ok=false;break}if(ok)return true}
+  return false;
+}
+function ocAnalyze(hero,board){
+  const cur=Math.floor(eval7([...hero,...board])/371293),used=new Set([...hero,...board]),outs=[];
+  for(let c=0;c<52;c++){
+    if(used.has(c))continue;const nb=[...board,c],all=[...hero,...nb];
+    const cat=Math.floor(eval7(all)/371293),bc=Math.floor(eval7(nb)/371293);
+    if(!(cat>cur&&cat>bc))continue;
+    const fl=cat===5||cat===8;
+    const st=cat===4||cat===8||(cat===5&&hasStr(all));
+    outs.push({c,cat,fl,st});
+  }
+  return {cur,outs};
+}
+function ocGroups(a){
+  const F=a.outs.filter(o=>o.fl),S=a.outs.filter(o=>o.st),ov=a.outs.filter(o=>o.fl&&o.st);
+  const rest=a.outs.filter(o=>!o.fl&&!o.st),by={};
+  rest.forEach(o=>{(by[HAND_NAMES[o.cat]]=by[HAND_NAMES[o.cat]]||[]).push(o)});
+  return {F,S,ov,by,rest};
+}
+function ocNew(){
+  const want=['F','S','S','P','FS'][(Math.random()*5)|0];
+  for(let t=0;t<600;t++){
+    const turn=Math.random()<0.4,d=shuffled(52),hero=[d[0],d[1]],board=d.slice(2,turn?6:5);
+    const a=ocAnalyze(hero,board);if(a.cur>1||Math.floor(eval7(board)/371293)>0)continue;
+    const n=a.outs.length;if(n<4||n>15)continue;
+    const g=ocGroups(a),F=g.F.length>0,St=g.S.length>0;if(t<250&&!(want==='F'?F&&!St:want==='S'?St&&!F:want==='FS'?F&&St:!F&&!St))continue;
+    oc={hero,board,turn,a,g,sel:new Set(),checked:false,formula:false,hint:false};return renderOc();
+  }
+  return ocNew();
+}
+function ocCard(c,cls,dis){
+  const s=SUITS[(c/13)|0];
+  return `<button class="oc ${cls||''} ${s==='h'||s==='d'?'r':''}" data-c="${c}" ${dis?'disabled':''} aria-label="${RANKS[c%13]}${SUIT_NAME[s]}" aria-pressed="${cls&&cls.includes('sel')?'true':'false'}">${RANKS[c%13]}<small>${SYM[s]}</small></button>`;
+}
+function ocGrid(){
+  const used=new Set([...oc.hero,...oc.board]),outSet=new Set(oc.a.outs.map(o=>o.c));
+  let h='<div class="ocgrid">';
+  for(let su=0;su<4;su++)for(let r=12;r>=0;r--){
+    const c=su*13+r;let cls='';
+    if(used.has(c)){h+=ocCard(c,'seen',true);continue}
+    const sel=oc.sel.has(c);
+    if(oc.checked){cls=sel&&outSet.has(c)?'good sel':sel?'wrong sel':outSet.has(c)?'miss':'';h+=ocCard(c,cls,true)}
+    else h+=ocCard(c,sel?'sel':'',false);
+  }
+  return h+'</div>';
+}
+function ocExplain(){
+  const g=oc.g,n=oc.a.outs.length,L=[];
+  const fl=g.F.length,st=g.S.length,ov=g.ov.length;
+  if(fl)L.push(`<b>同花</b>：${fl} 張（${[...new Set(g.F.map(o=>SUIT_NAME[SUITS[(o.c/13)|0]]))].join('、')}）`);
+  if(st)L.push(`<b>順子</b>：${st} 張（點數 ${[...new Set(g.S.map(o=>RANKS[o.c%13]))].join('、')}）`);
+  if(ov)L.push(`其中 <b>${ov}</b> 張同時能成同花與順子，只能算一次 → 要扣掉重複`);
+  Object.keys(g.by).forEach(k=>L.push(`<b>${k}</b>：${g.by[k].length} 張（${[...new Set(g.by[k].map(o=>RANKS[o.c%13]))].join('、')}）`));
+  let sum=[];if(fl)sum.push(fl);if(st)sum.push(st);
+  let eqn=sum.join(' + ');if(ov)eqn+=' − '+ov;
+  Object.keys(g.by).forEach(k=>{eqn+=(eqn?' + ':'')+g.by[k].length});
+  return `<ul>${L.map(x=>'<li>'+x+'</li>').join('')}</ul><div>合計 outs ＝ ${eqn} ＝ <b>${n} 張</b></div>`;
+}
+function ocHintText(){
+  const g=oc.g,k=[];
+  if(g.F.length)k.push('同花聽牌');
+  if(g.S.length)k.push(g.S.length>=7?'兩頭順子聽牌':'順子聽牌（卡順或雙卡）');
+  Object.keys(g.by).forEach(x=>k.push('補成'+x));
+  return k.join('、');
+}
+function renderOc(){
+  const e=oc,street=e.turn?'轉牌':'翻牌',n=e.a.outs.length,sel=e.sel.size,p=document.getElementById('t-eq');
+  const exact=e.turn?n/46*100:(1-(47-n)*(46-n)/(47*46))*100,rule=e.turn?n*2:n*4,ref=e.turn||n<=8?rule:rule-(n-8);
+  let res='';
+  if(e.checked){
+    const outSet=new Set(e.a.outs.map(o=>o.c));let good=0,wrong=0;e.sel.forEach(c=>outSet.has(c)?good++:wrong++);const miss=n-good;
+    const perfect=!wrong&&!miss;
+    res=`<div class="res ${perfect?'ok':'warn'}" aria-live="polite"><b>${perfect?'✔ 全對！':'你選了 '+sel+' 張：對 '+good+'、多選 '+wrong+'、漏掉 '+miss}</b>
+      <div class="mut">綠＝選對　紅＝其實不是 outs　黃框＝漏掉的 outs</div>${ocExplain()}
+      <div class="mut">outs 的定義：補到這張後，你的牌型「升級」了（例如一對 → 兩對、無對 → 順子/同花）。</div></div>`;
+    res+=`<div class="panel ocf"><h3>第 2 步：套公式，估算補中機率</h3>
+      <div>${e.turn?'轉牌只剩 1 張牌要發 → 機率 ≈ outs × <b>2</b>%':'翻牌還有 2 張牌要發（轉牌＋河牌）→ 到河牌前補中的機率 ≈ outs × <b>4</b>%'}</div>
+      <div class="mut">你的 outs 是 ${n} 張，代入：${n} × ${e.turn?2:4} = ?</div>
+      ${e.formula?'':`<label for="oc-g">你算出的機率（%）</label> <input type="number" id="oc-g" min="0" max="100" inputmode="numeric" style="width:80px"> <button class="b" id="oc-sub">送出</button>`}`;
+    if(e.formula){
+      const g=e.guess,err=Math.abs(g-exact);
+      res+=`<div class="res ${err<=3?'ok':err<=6?'warn':'bad'}"><b>${err<=3?'✔ 很接近':'誤差 '+err.toFixed(1)+' 個百分點'}</b>　你算 ${g}%<br>
+        口訣：${n} × ${e.turn?2:4} = <b>${rule}%</b>${!e.turn&&n>8?`；outs 多於 8 時再減 (${n} − 8) = ${n-8} → <b>${ref}%</b>`:''}<br>
+        精確值：${e.turn?`${n} ÷ 46`:`1 − (${47-n}÷47 × ${46-n}÷46)`} ＝ <b>${exact.toFixed(1)}%</b></div>
+        <div class="mut">記憶：翻牌 ×4、轉牌 ×2；outs 很多（&gt;8）時 ×4 會高估，減掉多出來的張數即可。口訣只算「補中」機率，不含對手也可能更強。</div>`;
+    }
+    res+='</div>';
+  }
+  p.innerHTML=`<div class="panel"><div class="eqmode"><button class="b s" data-m="est">估勝率</button><button class="b" data-m="outs" aria-pressed="true">數 outs（教練）</button></div>
+  <h2>Outs 教練：自己數、再套公式</h2>
+  <div class="mut">三步驟：①找出你的 outs（補到之後牌型變好的牌）②數張數、扣掉重複 ③套公式：翻牌 ×4、轉牌 ×2。</div>
+  <div style="margin-top:8px">街道：<b>${street}</b></div>
+  <div class="cards">${cardsHTML(e.hero)}<span class="sep"></span>${cardsHTML(e.board)}</div>
+  <h3>第 1 步：點出所有的 outs（剩下的牌共 ${52-e.hero.length-e.board.length} 張）</h3>
+  ${ocGrid()}
+  <div class="ocinfo">已選 <b>${sel}</b> 張${e.hint&&!e.checked?`　💡 這手牌的機會：${ocHintText()}`:''}</div>
+  ${e.checked?'':`<button class="b" id="oc-chk">檢查我的 outs</button><button class="b s" id="oc-hint">提示</button><button class="b s" id="oc-clr">清除</button>`}
+  <button class="b s" id="oc-next">下一題</button>
+  ${res}
+  <details class="adv"><summary>新手：outs 是什麼？怎麼數？</summary>
+   <ol><li>先看你「差一張就變大」的牌型：同花（4 張同花色）、順子（差一張連起來）、或一對變三條／兩對。</li>
+   <li>算出每種牌型剩下幾張：同花聽牌＝13 − 已看到的同花色牌＝通常 9 張；兩頭順子 8 張；卡順 4 張；底牌兩張高牌想配對 6 張。</li>
+   <li>同一張牌若能同時成兩種牌型，只算一次（扣重複）。</li>
+   <li>翻牌 outs × 4、轉牌 outs × 2，得到大約的補中機率。</li></ol></details></div>`;
+  p.querySelectorAll('.eqmode button').forEach(b=>b.onclick=()=>{EQM=b.dataset.m;EQM==='outs'?(oc?renderOc():ocNew()):eqNew()});
+  p.querySelectorAll('.ocgrid .oc').forEach(b=>b.onclick=()=>{if(e.checked)return;const c=+b.dataset.c;e.sel.has(c)?e.sel.delete(c):e.sel.add(c);renderOc()});
+  const g2=id=>document.getElementById(id);
+  if(g2('oc-chk'))g2('oc-chk').onclick=()=>{
+    e.checked=true;S.outs=S.outs||{n:0,c:0};S.outs.n++;
+    const outSet=new Set(e.a.outs.map(o=>o.c));if(e.sel.size===outSet.size&&[...e.sel].every(c=>outSet.has(c)))S.outs.c++;
+    save();renderOc();
+  };
+  if(g2('oc-hint'))g2('oc-hint').onclick=()=>{e.hint=true;renderOc()};
+  if(g2('oc-clr'))g2('oc-clr').onclick=()=>{e.sel.clear();renderOc()};
+  g2('oc-next').onclick=ocNew;
+  if(g2('oc-sub'))g2('oc-sub').onclick=()=>{const v=parseFloat(g2('oc-g').value);if(isNaN(v))return;e.guess=v;e.formula=true;if(typeof bump==='function')bump('eq');renderOc()};
+}
+const _renderEqOuts=renderEq;
+renderEq=function(){
+  if(EQM==='outs'&&oc)return renderOc();
+  _renderEqOuts();
+  const first=document.querySelector('#t-eq .panel');
+  const bar=document.createElement('div');bar.className='eqmode';
+  bar.innerHTML='<button class="b" data-m="est" aria-pressed="true">估勝率</button><button class="b s" data-m="outs">數 outs（教練）</button>';
+  first.insertBefore(bar,first.firstChild);
+  bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{EQM=b.dataset.m;EQM==='outs'?(oc?renderOc():ocNew()):renderEq()});
 };
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
