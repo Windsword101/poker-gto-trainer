@@ -239,6 +239,7 @@ table.grid td.pick{outline:2px solid #ffd54a;outline-offset:-2px;position:relati
 .poschips .b{flex:0 0 auto;min-width:48px;min-height:40px;padding:6px 12px;margin:0}
 .poschips .b.on{background:var(--acc);color:#04121f}
 @media(max-width:640px){table.grid td{font-size:clamp(9px,2.9vw,13px)}}
+.pdiag .seat.opp .box{border-color:#d9534f;box-shadow:0 0 12px rgba(217,83,79,.7);background:#2a1414}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -3648,6 +3649,32 @@ renderPre=function(){
   row.innerHTML=[...sel.options].map(o=>`<button class="b s${o.value===sel.value?' on':''}" data-p="${o.value}">${o.value}</button>`).join('');
   row.onclick=e=>{const b=e.target.closest('button');if(!b)return;sel.value=b.dataset.p;sel.onchange();row.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
   sel.style.display='none';sel.parentNode.insertBefore(row,sel);
+};
+
+/* ===== 面對加注練習：位置圖（標出開池者與你）===== */
+function faceDiagram(heroPos,oppPos,sz){
+  const n=6,ord=POS_ORDER[6],h=ord.indexOf(heroPos),o=ord.indexOf(oppPos);if(h<0||o<0)return '';
+  const L=seatLayout(n),btn=ord.indexOf('BTN');
+  const seats=ord.map((p,i)=>{
+    const k=(i-h+n)%n,me=i===h,op=i===o,after=i>o&&i>h;
+    const st=`left:${L[k].x.toFixed(1)}%;top:${L[k].y.toFixed(1)}%`;
+    const cls=me?'act':op?'opp':after?'later':'fold';
+    const note=me?'輪到你':op?'開池 '+sz:after?'還沒行動':'已棄牌';
+    const sub=me?'★ 你':op?'開池者':POS_ZH[p];
+    return `<div class="seat pd ${cls}" style="${st}"><div class="box"><div class="nm"><span class="pos">${p}</span></div><div class="stk" style="font-size:11px;color:${me?'#ffd54a':op?'#ff8a80':'#8b9bab'}">${sub}</div></div><div class="la" style="visibility:visible">${note}</div></div>`;
+  }).join('');
+  const D=L[(btn-h+n)%n];
+  const dst=`left:${(50+(D.x-50)*0.74+3).toFixed(1)}%;top:${(47+(D.y-47)*0.74).toFixed(1)}%`;
+  return `<div class="tbl pdiag" role="img" aria-label="牌桌位置圖：${oppPos} 開池，你在 ${heroPos}"><div class="felt"></div>${seats}<div class="dbtn" style="${dst}">D</div><div class="pdc">順時針行動 ↻</div></div>`;
+}
+const _renderLearnPos=renderLearn;
+renderLearn=function(){
+  _renderLearnPos();
+  const sc=FACE[face.name],host=document.getElementById('fa-f');if(!sc||!host)return;
+  const m=sc.sz.match(/開 ([\d.]+bb)/),box=document.createElement('div');
+  box.innerHTML=faceDiagram(sc.hero,sc.opp,m?m[1]:'加注');
+  const cards=host.parentNode.querySelector('.cards');
+  if(cards)cards.parentNode.insertBefore(box.firstElementChild,cards);
 };
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
