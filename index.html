@@ -228,6 +228,17 @@ body.simfull #whenbox{display:none!important}
 .pdiag .seat.later .box{opacity:.7}
 .pdiag .seat.act .box{background:#2a2410}
 .pdiag .pdc{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);color:#cfe;font-size:12px;opacity:.7;z-index:1}
+table.grid{width:100%;max-width:560px;table-layout:fixed;margin:8px auto 4px}
+table.grid td{width:auto;height:min(calc((100vw - 66px)/13),42px);font-size:clamp(9px,2.6vw,14px);font-weight:600;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+table.grid td i{font-style:normal;font-size:.72em;opacity:.8}
+table.grid td.pick{outline:2px solid #ffd54a;outline-offset:-2px;position:relative;z-index:1}
+.ginfo{max-width:560px;margin:4px auto;padding:7px 10px;background:#0f1720;border-radius:8px;font-size:14px;min-height:20px}
+.glg{max-width:560px;margin:4px auto;display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mut)}
+.glg b{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.poschips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch}
+.poschips .b{flex:0 0 auto;min-width:48px;min-height:40px;padding:6px 12px;margin:0}
+.poschips .b.on{background:var(--acc);color:#04121f}
+@media(max-width:640px){table.grid td{font-size:clamp(9px,2.9vw,13px)}}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -3609,6 +3620,34 @@ renderPre=function(){
   const n=PRE_N,pos=pre.pos,ord=POS_ORDER[n],h=ord.indexOf(pos);
   const left=ord.slice(h+1).filter(p=>p!=='SB'&&p!=='BB'||true).length;
   d.innerHTML=`位置：<b>${pos}</b>（${POS_ZH[pos]}）— 你後面還有 <b>${left}</b> 位玩家沒行動`+posDiagram(n,pos);
+};
+
+/* ===== 範圍表：手機優化（滿版方格、點格看說明、位置按鈕、圖例）===== */
+gridHTML=function(map,mine){
+  let h='<table class="grid">';
+  for(let i=0;i<13;i++){h+='<tr>';for(let j=0;j<13;j++){
+    const ri=12-i,rj=12-j;const l=i===j?lab(ri,ri,false):i<j?lab(ri,rj,true):lab(rj,ri,false);
+    const f=map.get(l)||0;
+    const bg=f>0?`rgba(46,166,106,${(0.25+0.75*f).toFixed(2)})`:'#243140';
+    h+=`<td style="background:${bg}" data-l="${l}" data-f="${f}" class="${l===mine?'me':''}">${l.slice(0,2)}<i>${l.slice(2)}</i></td>`}h+='</tr>'}
+  return h+`</table><div class="ginfo" aria-live="polite">${mine?'白框＝你的手牌。':''}點任一格，看那手牌在這個範圍的頻率。</div>
+  <div class="glg"><span><b style="background:rgba(46,166,106,1)"></b>一定加注</span><span><b style="background:rgba(46,166,106,.5)"></b>有時加注</span><span><b style="background:#243140"></b>棄牌</span></div>`;
+};
+document.addEventListener('click',e=>{
+  const td=e.target.closest&&e.target.closest('table.grid td');if(!td||!td.dataset.l)return;
+  const t=td.closest('table.grid'),info=t.nextElementSibling;if(!info||!info.classList.contains('ginfo'))return;
+  t.querySelectorAll('td.pick').forEach(x=>x.classList.remove('pick'));td.classList.add('pick');
+  const f=+td.dataset.f,l=td.dataset.l,kind=l.length===2?'對子':l.endsWith('s')?'同花':'非同花';
+  info.innerHTML=`<b>${l}</b>（${kind}）：${f>=0.995?'<span style="color:#4cff9a">一定加注</span>':f>0?`有時加注，約 <b>${Math.round(f*100)}%</b>`:'<span style="color:#ff8a80">棄牌</span>'}`;
+});
+const _renderPreChips=renderPre;
+renderPre=function(){
+  _renderPreChips();
+  const sel=document.getElementById('pre-view');if(!sel)return;
+  const row=document.createElement('div');row.className='poschips';row.setAttribute('role','group');row.setAttribute('aria-label','選擇位置');
+  row.innerHTML=[...sel.options].map(o=>`<button class="b s${o.value===sel.value?' on':''}" data-p="${o.value}">${o.value}</button>`).join('');
+  row.onclick=e=>{const b=e.target.closest('button');if(!b)return;sel.value=b.dataset.p;sel.onchange();row.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
+  sel.style.display='none';sel.parentNode.insertBefore(row,sel);
 };
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
