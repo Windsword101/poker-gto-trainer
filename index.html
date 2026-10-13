@@ -2061,13 +2061,13 @@ COURSE.push(
  {id:'8.2',t:'籌碼深度與 M 值',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
   body:()=>`<p>錦標賽的策略首先看「<b>有效籌碼是幾個大盲（bb）</b>」。</p>
   <table class="t"><tr><th>籌碼深度</th><th>名稱</th><th>策略重點</th></tr>
-  <tr><td>40bb 以上</td><td>深碼</td><td>接近現金桌打法，可玩翻後</td></tr><tr><td>20–40bb</td><td>中碼</td><td>翻前加注更精簡，避免無謂的小底池</td></tr>
+  <tr><td>40bb 以上</td><td>長碼</td><td>接近現金桌打法，可玩翻後</td></tr><tr><td>20–40bb</td><td>中碼</td><td>翻前加注更精簡，避免無謂的小底池</td></tr>
   <tr><td>10–20bb</td><td>短碼</td><td>開始「加注全下」或棄牌，翻後空間有限</td></tr><tr><td>10bb 以下</td><td>極短碼</td><td>幾乎只有「全下或棄牌」</td></tr></table>
   <h3>M 值</h3><p><b>M = 籌碼 ÷（小盲 + 大盲 + 前注）</b>，代表你還能撐幾輪盲注。例：籌碼 1200、盲注 50/100、無前注，M = 1200 ÷ 150 = 8，也就是 12bb。</p>
   <p>盲注升級後，同樣的籌碼會落到更淺的區間——不動的人會被盲注慢慢吃掉。</p>`,
   quiz:[Q('籌碼 3000、盲注 100/200，有效籌碼約是幾 bb？',['10bb','15bb','20bb','30bb'],1,'3000 ÷ 200 = 15bb。'),
         Q('籌碼 3000、盲注 100/200、無前注，M 值是？',['5','10','15','30'],1,'M = 3000 ÷（100 + 200）= 10。'),
-        Q('15bb 通常屬於哪個區間？',['深碼','中碼','短碼','極短碼'],2,'10–20bb 是短碼區，開始偏向加注全下或棄牌。')]},
+        Q('15bb 通常屬於哪個區間？',['長碼','中碼','短碼','極短碼'],2,'10–20bb 是短碼區，開始偏向加注全下或棄牌。')]},
  {id:'8.3',t:'獎金結構與泡沫期',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
   body:()=>`<p>錦標賽的獎金是<b>階梯狀</b>的：名次差一名，獎金可能差很多。</p>
   <table class="t"><tr><th>名次（9 人 SNG）</th><th>獎金</th><th>與下一名差距</th></tr><tr><td>第 1 名</td><td>450</td><td>比第 2 名多 180</td></tr><tr><td>第 2 名</td><td>270</td><td>比第 3 名多 90</td></tr><tr><td>第 3 名</td><td>180</td><td>比第 4 名多 180</td></tr><tr><td>第 4 名以後</td><td>0</td><td>—</td></tr></table>
@@ -2156,7 +2156,7 @@ COURSE.push(
         Q('多人錦標賽的均衡比起兩人推或棄牌？',['更簡單','更複雜，且不唯一','完全一樣','不存在'],1,'多人加上獎金結構，策略互動複雜很多。')]},
  {id:'10.4',t:'錦標賽決策清單與總整理',prac:[['打一場錦標賽（模擬比賽）','t-sim'],['手牌歷史','t-hist']],
   body:()=>`<p>每次做重要決策前，快速走一遍：</p>
-  <ol><li><b>有效籌碼</b>幾 bb？（深碼、中碼、短碼、極短碼）</li><li><b>位置</b>：後面還有幾個人？我有沒有位置？</li>
+  <ol><li><b>有效籌碼</b>幾 bb？（長碼、中碼、短碼、極短碼）</li><li><b>位置</b>：後面還有幾個人？我有沒有位置？</li>
   <li><b>名次與獎金</b>：還剩幾人？離獎金圈或下一個階梯多遠？</li>
   <li><b>對手籌碼與風格</b>：誰能淘汰我？誰怕被淘汰？</li><li><b>ICM 壓力</b>：氣泡因子大概多高？</li>
   <li><b>期望值</b>：勝率對所需勝率（含 ICM）。</li></ol>
@@ -2288,7 +2288,7 @@ function renderSim(){
       <div class="topbar2"><select id="s-tn" aria-label="桌型"><option value="6" ${N===6?'selected':''}>6 人桌</option><option value="9" ${N===9?'selected':''}>9 人桌</option></select>
         <select id="s-tm" aria-label="賽制"><option value="cash" ${SIM.mode==='cash'?'selected':''}>現金桌（每手重置 100bb）</option><option value="sng" ${SIM.mode==='sng'?'selected':''}>錦標賽 SNG（盲注遞增、有獎金）</option></select></div>
       <div>${SIM.mode==='cash'?T_("setFlop(!SIM.flop)",'從翻牌開始',SIM.flop):''}${T_("tog('info')",'即時資訊',SIM.info)}${T_("tog('reveal')",'顯示對手風格',SIM.reveal)}${T_("tog('sound')",'🔊 音效',SIM.sound)}${T_("tog('timerOn')",'⏱ 20 秒倒數',SIM.timerOn)}${T_("tog('keys')",'⌨ 單鍵快捷鍵',SIM.keys!==false)}</div>
-      ${SIM.mode==='cash'?`<div style="margin-top:6px">起始籌碼：<select id="s-dp" aria-label="起始籌碼深度" style="width:auto">${[[12,'12bb 極短碼'],[25,'25bb 中短碼'],[40,'40bb 中碼'],[100,'100bb 常碼'],[200,'200bb 深碼']].map(([v,l])=>`<option value="${v}" ${v===SIM.depth?'selected':''}>${l}</option>`).join('')}</select>（更改後請按「套用並重新開始」）</div>`:''}
+      ${SIM.mode==='cash'?`<div style="margin-top:6px">起始籌碼：<select id="s-dp" aria-label="起始籌碼深度" style="width:auto">${[[12,'12bb 極短碼'],[25,'25bb 中短碼'],[40,'40bb 中碼'],[100,'100bb 長碼'],[200,'200bb 超長碼']].map(([v,l])=>`<option value="${v}" ${v===SIM.depth?'selected':''}>${l}</option>`).join('')}</select>（更改後請按「套用並重新開始」）</div>`:''}
       <div style="margin-top:6px">${SIM.mode==='cash'?`比賽手數：<select id="s-max" aria-label="比賽手數" style="width:auto">${[10,20,30,50,100].map(n=>`<option ${n===SIM.max?'selected':''}>${n}</option>`).join('')}</select>`:`升盲速度：<select id="s-lh" aria-label="升盲速度" style="width:auto">${[5,8,12].map(n=>`<option value="${n}" ${n===SIM.levelHands?'selected':''}>每 ${n} 手升一級</option>`).join('')}</select>`}（更改後請按「重新開始」）</div>
       <div class="mut" style="margin-top:8px">現金桌每手重置為起始籌碼深度（預設 100bb）；錦標賽起始 1500 籌碼，盲注 10/20 起，無前注，打到你被淘汰或只剩一人為止。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你。提示依範圍表與蒙地卡羅估算，非即時求解器輸出。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div>
       <button class="b big" style="margin-top:10px" onclick="newMatch()">套用並重新開始</button></div></div>`;
@@ -2441,7 +2441,7 @@ function renderCalc(){
   };
 }
 
-/* ============ 情境練習：短碼、常碼、尺度解讀 ============ */
+/* ============ 情境練習：短碼、長碼、尺度解讀 ============ */
 SIM.depth=100;
 function keepForSize(f){return f<=0.3?0.7:f<=0.4?0.62:f<=0.6?0.55:f<=0.8?0.48:f<=1.05?0.42:0.33}
 function sizeRead(f){
@@ -2461,7 +2461,7 @@ const SCN={mode:'A',sc:null,answered:false};
 const scnStat=k=>{S.scn=S.scn||{};S.scn[k]=S.scn[k]||{n:0,c:0};return S.scn[k]};
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pick=a=>a[(Math.random()*a.length)|0];
-const SCN_TITLE={A:'短碼：推或棄牌',B:'短碼：面對全下',C:'常碼：翻後下注',D:'尺度解讀：面對下注'};
+const SCN_TITLE={A:'短碼：推或棄牌',B:'短碼：面對全下',C:'長碼：翻後下注',D:'尺度解讀：面對下注'};
 function boardTexture(b){
   const suits={},ranks=b.map(c=>c%13).sort((x,y)=>x-y);b.forEach(c=>{const s=(c/13)|0;suits[s]=(suits[s]||0)+1});
   const paired=new Set(ranks).size<ranks.length,fl=Math.max(...Object.values(suits)),span=ranks[ranks.length-1]-ranks[0];
@@ -2490,7 +2490,7 @@ function scnGenB(){
   for(let k=0;k<14;k++){const d=shuffled(52),h=[d[0],d[1]],r=equity(h,[],rg,500);if(!r)continue;const diff=Math.abs(r.eq-need);if(!best||diff<best.diff)best={h,eq:r.eq,diff}}
   return {type:'B',vp,E,vpct,need,pot0,toCall,hand:best.h,eq:best.eq};
 }
-/* ---- C：常碼翻後下注 ---- */
+/* ---- C：長碼翻後下注 ---- */
 function betActs(eq,street){
   if(eq>=.72)return {r:.85,c:.15,frac:.66};
   if(eq>=.58)return {r:.6,c:.4,frac:.5};
@@ -2569,7 +2569,7 @@ function renderScn(){
     acts=`<button class="b r scn-act" onclick="scnAnswer('f')">棄牌</button><button class="b g scn-act" onclick="scnAnswer('c')">跟注</button><button class="b scn-act" onclick="scnAnswer('r')">加注</button>`;
   }
   $('t-scn').innerHTML=`<div class="panel"><h2>情境練習</h2>
-  <div class="mut">針對特定情境反覆練習：短碼推或棄牌、面對短碼全下、常碼翻後下注，以及從對手的下注尺度推測範圍。範圍與策略為近似值。</div>
+  <div class="mut">針對特定情境反覆練習：短碼推或棄牌、面對短碼全下、長碼翻後下注，以及從對手的下注尺度推測範圍。範圍與策略為近似值。</div>
   <div class="qb" style="margin-top:8px">${tabs}</div></div>
   <div class="panel"><h2>${SCN_TITLE[SCN.mode]}</h2><div>${desc}</div>
   <div class="cards">${cardsHTML(s.hand)}${s.board?'<span class="sep"></span>'+cardsHTML(s.board):''}</div>
@@ -2590,18 +2590,18 @@ QGEN.sizeneed=function(){
     why:askMdf?`MDF = 底池 ÷（底池 + 下注）= 1 ÷ (1 + ${fr.toFixed(2)}) ≈ ${mdf}%。`:`所需勝率 = 下注 ÷（底池 + 2×下注）= ${fr.toFixed(2)} ÷ (1 + 2×${fr.toFixed(2)}) ≈ ${need}%。`};
 };
 COURSE.push({t:'情境專題：籌碼深度與尺度',goal:'依籌碼深度調整打法，並從對手的下注尺度推測範圍、做出回應',lessons:[
- {id:'11.1',t:'籌碼深度總覽：深碼、常碼、中碼、短碼',prac:[['對戰：選擇起始籌碼深度','t-sim'],['情境練習','t-scn']],
+ {id:'11.1',t:'籌碼深度總覽：長碼、中碼、短碼',prac:[['對戰：選擇起始籌碼深度','t-sim'],['情境練習','t-scn']],
   body:()=>`<p>同一手牌，在不同籌碼深度下的打法可以完全不同。先認識五個區間（以有效籌碼的 bb 數計）：</p>
   <table class="t"><tr><th>深度</th><th>名稱</th><th>策略重點</th></tr>
-  <tr><td>150bb 以上</td><td>深碼</td><td>隱含賠率高：小對子、同花連張價值上升；3-bet 尺碼更大；要能打三條街</td></tr>
-  <tr><td>80–120bb</td><td>常碼</td><td>標準的翻前圖表與翻後打法（本練習器的預設）</td></tr>
+  <tr><td>150bb 以上</td><td>超長碼</td><td>隱含賠率高：小對子、同花連張價值上升；3-bet 尺碼更大；要能打三條街</td></tr>
+  <tr><td>80–120bb</td><td>長碼</td><td>標準的翻前圖表與翻後打法（本練習器的預設）</td></tr>
   <tr><td>40–60bb</td><td>中碼</td><td>隱含賠率下降，小對子、同花連張價值降低；3-bet 底池 SPR 約 2–3，常是一兩條街就決定</td></tr>
   <tr><td>20–40bb</td><td>中短碼</td><td>開池尺碼縮小，3-bet 全下成為選項；翻後 SPR 低，頂對常能打到全下</td></tr>
   <tr><td>15bb 以下</td><td>短碼</td><td>推或棄牌，翻後幾乎沒有操作空間</td></tr></table>
   <h3>SPR 快速估算</h3><p>SPR＝有效籌碼 ÷ 底池。單次加注底池（約 5.5bb）：100bb → SPR ≈ 17；40bb → ≈ 7；20bb → ≈ 3。SPR 越低，越應該「用手牌直接決定要不要投入全部籌碼」。</p>
   <div class="mut">對戰設定（⚙）可選起始籌碼：12 / 25 / 40 / 100 / 200bb，再到「情境練習」做專項練習。</div>`,
   quiz:[Q('有效籌碼 40bb、底池 5.5bb（單次加注），SPR 約為？',['3','7','17','30'],1,'(40 − 2.5) ÷ 5.5 ≈ 6.8，約 7。'),
-        Q('哪種深度最重視「小對子、同花連張」這類隱含賠率牌？',['短碼','中短碼','深碼','都一樣'],2,'籌碼越深，成牌後能多贏的錢越多，隱含賠率越高。'),
+        Q('哪種深度最重視「小對子、同花連張」這類隱含賠率牌？',['短碼','中短碼','超長碼','都一樣'],2,'籌碼越深，成牌後能多贏的錢越多，隱含賠率越高。'),
         Q('籌碼 12bb 時，翻前通常傾向？',['小加注看翻牌','全下或棄牌','只跟注','一律過牌'],1,'短碼區翻後沒有操作空間，翻前推或棄牌最有效率。')]},
  {id:'11.2',t:'短碼與中短碼打法（10–25bb）',prac:[['情境練習：短碼推或棄牌','t-scn'],['情境練習：面對短碼全下','t-scn']],
   body:()=>`<h3>1. 先看有效籌碼與位置</h3><p>有效籌碼是你和潛在對手中較短的那個。位置越後、籌碼越淺，全下範圍越寬（本練習器 10bb：UTG 約 12%、CO 約 30%、BTN 約 45%、SB 約 55%）。</p>
@@ -2613,15 +2613,15 @@ COURSE.push({t:'情境專題：籌碼深度與尺度',goal:'依籌碼深度調�
   quiz:[Q('15bb 的 BTN，前面都棄牌，通常合理的做法是？',['重重加注 4bb','全下範圍內的牌，其餘棄牌','只跟注盲注','全部棄牌'],1,'短碼區用「全下或棄牌」最有效率，BTN 的全下範圍很寬。'),
         Q('對手籌碼越淺，你面對他的全下時？',['要更緊','可以跟注得更寬','不能跟注','不需要考慮'],1,'短碼的全下範圍很寬，你的牌對它的勝率就比較高。'),
         Q('面對 4bb 的加注，你只有 15bb 且持中等牌（如 A9o），較常見的做法是？',['跟注看翻牌','視位置與對手範圍，傾向棄牌或全下，不容易只跟注','加注到 8bb','過牌'],1,'短碼面對加注，跟注會讓翻後 SPR 很低又沒有位置，通常「全下或棄牌」。')]},
- {id:'11.3',t:'常碼打法（40–100bb）',prac:[['情境練習：常碼翻後下注','t-scn'],['模擬比賽（100bb）','t-sim']],
-  body:()=>`<p>常碼是本練習器翻前圖表的標準情境。重點是<b>有計畫地打完整個牌局</b>。</p>
+ {id:'11.3',t:'長碼與中碼打法（40–100bb）',prac:[['情境練習：長碼翻後下注','t-scn'],['模擬比賽（100bb）','t-sim']],
+  body:()=>`<p>長碼（約 100bb）是本練習器翻前圖表的標準情境。重點是<b>有計畫地打完整個牌局</b>。</p>
   <h3>翻前</h3><ul><li>開池 2.2–2.5bb（SB 約 3bb）；3-bet 有位置約 3 倍、沒位置約 4 倍。</li><li>40–60bb：開池可略小、較少用邊緣的投機牌；3-bet 後 SPR 低，強牌可直接打光。</li></ul>
   <h3>翻後：先想好三條街的計畫</h3>
   <ol><li><b>成牌價值牌</b>：計畫打兩到三條街（翻牌小到中注、轉牌加大、河牌視對手跟注範圍收尾）。</li>
   <li><b>聽牌</b>：翻牌半詐唬，轉牌補中就繼續下注，沒補中依賠率與對手反應決定。</li>
   <li><b>弱的成牌</b>：多控制底池，用過牌或小注收取薄價值，不打大底池。</li></ol>
   <h3>尺度選擇（常見做法）</h3><table class="t"><tr><th>情境</th><th>常用尺度</th></tr><tr><td>乾燥牌面持續下注</td><td>約 1/3 底池，高頻率</td></tr><tr><td>濕潤牌面、強牌或好聽牌</td><td>約 2/3 底池，頻率較低</td></tr><tr><td>河牌極化範圍</td><td>3/4 底池到滿池</td></tr></table>`,
-  quiz:[Q('常碼下，乾燥牌面（K♠7♦2♣）上翻前加注者的持續下注，常用？',['滿池大注、低頻率','約 1/3 底池、高頻率','一律過牌','全下'],1,'乾燥牌面範圍優勢明顯，小注高頻率就能獲利。'),
+  quiz:[Q('長碼（約 100bb）下，乾燥牌面（K♠7♦2♣）上翻前加注者的持續下注，常用？',['滿池大注、低頻率','約 1/3 底池、高頻率','一律過牌','全下'],1,'乾燥牌面範圍優勢明顯，小注高頻率就能獲利。'),
         Q('「有計畫地打三條街」的意思是？',['每條街都全下','在翻牌就想好轉牌、河牌要怎麼打','只打翻牌','隨機決定'],1,'先規劃整手牌的價值與詐唬路線，避免被迫在河牌做難決定。'),
         Q('40–60bb 比 100bb 更不適合的牌是？',['AA','AK','小同花連張（如 65s）','KK'],2,'籌碼淺時隱含賠率變低，投機牌價值下降。')]},
  {id:'11.4',t:'判讀對手的下注尺度',prac:[['情境練習：尺度解讀','t-scn'],['對戰：看提示中的「尺度解讀」','t-sim']],
@@ -2656,7 +2656,7 @@ pracList=function(l){
   const g=k=>{const x=(S.scn||{})[k]||{n:0,c:0};return x},pct=x=>x.n?Math.round(x.c/x.n*100):0,a=g('A'),b=g('B'),c=g('C'),d=g('D');
   return [
     {t:`短碼：推或棄牌＋面對全下 合計至少 30 題、正確率 ≥ 75%（目前 ${a.n+b.n} 題，${pct({n:a.n+b.n,c:a.c+b.c})}%）`,ok:a.n+b.n>=30&&(a.c+b.c)/(a.n+b.n)>=.75},
-    {t:`常碼翻後下注：至少 15 題、正確率 ≥ 70%（目前 ${c.n} 題，${pct(c)}%）`,ok:c.n>=15&&c.c/c.n>=.7},
+    {t:`長碼翻後下注：至少 15 題、正確率 ≥ 70%（目前 ${c.n} 題，${pct(c)}%）`,ok:c.n>=15&&c.c/c.n>=.7},
     {t:`尺度解讀：至少 20 題、正確率 ≥ 70%（目前 ${d.n} 題，${pct(d)}%）`,ok:d.n>=20&&d.c/d.n>=.7}
   ];
 };
