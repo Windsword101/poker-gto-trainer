@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "德州撲克 GTO 練習器",
-  "short_name": "GTO 練習",
+  "name": "德州撲克入門練習器",
+  "short_name": "撲克入門",
   "description": "翻前範圍、勝率預測、底池賠率、模擬比賽與手牌歷史的德州撲克練習工具",
   "lang": "zh-Hant",
   "start_url": "./",
