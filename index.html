@@ -223,6 +223,11 @@ input.err,select.err{border-color:var(--bad)!important;outline:1px solid var(--b
 .whenbox{background:#1a2733;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 12px;font-size:13.5px}
 .whenbox>summary{cursor:pointer;font-weight:600}.whenbox ul{margin:6px 0 2px;padding-left:20px;line-height:1.7}
 body.simfull #whenbox{display:none!important}
+.pdiag{max-width:520px;aspect-ratio:16/10;margin:8px auto 4px}
+.pdiag .seat{width:84px;font-size:11px}.t9.pdiag .seat{width:70px;font-size:10px}
+.pdiag .seat.later .box{opacity:.7}
+.pdiag .seat.act .box{background:#2a2410}
+.pdiag .pdc{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);color:#cfe;font-size:12px;opacity:.7;z-index:1}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -3578,6 +3583,33 @@ function setWhen(id){
 }
 const _show4=show;
 show=function(id){_show4(id);setWhen(id)};
+
+/* ===== 翻前練習：牌桌位置圖 ===== */
+const POS_ORDER={6:['UTG','HJ','CO','BTN','SB','BB'],9:['UTG','UTG1','MP','LJ','HJ','CO','BTN','SB','BB']};
+const POS_ZH={UTG:'最前位',UTG1:'前位',MP:'中位',LJ:'中前位',HJ:'中後位',CO:'後位',BTN:'按鈕',SB:'小盲',BB:'大盲'};
+function posDiagram(n,pos){
+  const ord=POS_ORDER[n],h=ord.indexOf(pos);if(h<0)return '';
+  const L=seatLayout(n),btn=ord.indexOf('BTN');
+  const seats=ord.map((p,i)=>{
+    const k=(i-h+n)%n,me=i===h,before=i<h&&p!=='SB'&&p!=='BB'||(i<h),after=i>h;
+    const st=`left:${L[k].x.toFixed(1)}%;top:${L[k].y.toFixed(1)}%`;
+    const note=me?'輪到你':after?'還沒行動':'已棄牌';
+    return `<div class="seat pd ${me?'act':before?'fold':'later'}" style="${st}"><div class="box"><div class="nm"><span class="pos">${p}</span></div><div class="stk" style="font-size:11px;color:${me?'#ffd54a':'#8b9bab'}">${me?'★ 你':POS_ZH[p]}</div></div><div class="la" style="visibility:visible">${note}</div></div>`;
+  }).join('');
+  const D=L[(btn-h+n)%n];
+  const dst=`left:${(50+(D.x-50)*0.74+3).toFixed(1)}%;top:${(47+(D.y-47)*0.74).toFixed(1)}%`;
+  return `<div class="tbl${n===9?' t9':''} pdiag" role="img" aria-label="牌桌位置圖：你在 ${pos}，順時針依序行動"><div class="felt"></div>${seats}<div class="dbtn" style="${st0(dst)}">D</div><div class="pdc">順時針行動 ↻</div></div>`;
+}
+function st0(s){return s}
+const _renderPrePos=renderPre;
+renderPre=function(){
+  _renderPrePos();
+  const el=document.getElementById('t-pre'),d=[...el.querySelectorAll('div')].find(x=>/^位置：/.test(x.textContent)&&x.children.length===1&&x.firstElementChild.tagName==='B');
+  if(!d)return;
+  const n=PRE_N,pos=pre.pos,ord=POS_ORDER[n],h=ord.indexOf(pos);
+  const left=ord.slice(h+1).filter(p=>p!=='SB'&&p!=='BB'||true).length;
+  d.innerHTML=`位置：<b>${pos}</b>（${POS_ZH[pos]}）— 你後面還有 <b>${left}</b> 位玩家沒行動`+posDiagram(n,pos);
+};
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
 const UA=navigator.userAgent;
