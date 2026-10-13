@@ -133,6 +133,14 @@ nav#nav button.on{background:var(--acc);color:#04121f;border-color:var(--acc)}
 .lesson h3{font-size:15px;margin:14px 0 6px}.lesson p,.lesson li{line-height:1.7}.lesson ol,.lesson ul{padding-left:22px}
 details.adv summary{cursor:pointer;color:var(--acc);margin:6px 0}.adv-body{margin:6px 0}
 
+.topbar2{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.topbar2 select{width:auto}
+.t9 .seat{width:104px;font-size:11px}.t9 .hole .card{min-width:28px;font-size:13px;padding:3px 2px}
+.t9 .mc{width:20px;height:28px;line-height:28px;font-size:10px}.t9 .hud{display:none}
+@media(max-width:640px){
+ .t9 .seat{width:76px;font-size:9px}.t9 .hole .card{min-width:21px;font-size:10px;padding:2px 1px}
+ .t9 .mc{width:15px;height:21px;line-height:21px;font-size:8px}.t9 .la{font-size:9px}.t9 .bet{font-size:10px}
+}
+
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
 body{padding-bottom:env(safe-area-inset-bottom)}
@@ -157,6 +165,7 @@ details.panel summary::-webkit-details-marker{margin-right:6px}
   <section id="t-eq"></section>
   <section id="t-pot"></section>
   <section id="t-calc"></section>
+  <section id="t-icm"></section>
   <section id="t-kuhn"></section>
   <section id="t-paper"></section>
   <section id="t-stat"></section>
@@ -269,7 +278,7 @@ function save(){try{localStorage.setItem('gtoTrainer',JSON.stringify(S))}catch(e
 /* ============ 分頁 ============ */
 const GROUPS=[
  {k:'learn',icon:'📚',name:'學習',tabs:[['t-course','課程'],['t-learn','翻前教學']]},
- {k:'practice',icon:'🎯',name:'練習',tabs:[['t-pre','翻前範圍'],['t-eq','勝率預測'],['t-pot','底池賠率'],['t-calc','計算機']]},
+ {k:'practice',icon:'🎯',name:'練習',tabs:[['t-pre','翻前範圍'],['t-eq','勝率預測'],['t-pot','底池賠率'],['t-calc','計算機'],['t-icm','ICM 練習']]},
  {k:'play',icon:'♠',name:'對戰',tabs:[['t-sim','模擬比賽']]},
  {k:'record',icon:'📈',name:'紀錄',tabs:[['t-hist','手牌歷史'],['t-stat','統計']]},
  {k:'more',icon:'⋯',name:'更多',tabs:[['t-kuhn','CFR 演示'],['t-paper','論文索引'],['t-install','安裝 App']]}
@@ -288,6 +297,7 @@ function show(id){
   if(id==='t-sim'&&!G)newMatch();
   if(id==='t-hist')renderHist();
   if(id==='t-install')renderInstall();
+  if(id==='t-icm')renderIcm();
   if(id==='t-kuhn'&&!kuhnInit){kuhnInit=true;kuhnTrain(20000)}
   window.scrollTo(0,0);
 }
@@ -626,8 +636,8 @@ function renderLearn(){
 }
 
 /* ============ 模擬比賽（6-max，每手重置 100bb） ============ */
-const POSN=['BTN','SB','BB','UTG','HJ','CO'],PRANK={BTN:5,SB:0,BB:1,UTG:2,HJ:3,CO:4};
-const SEATN=['你','玩家 A','玩家 B','玩家 C','玩家 D','玩家 E'];
+const POSN=['BTN','SB','BB','UTG','HJ','CO'],PRANK={SB:0,BB:1,UTG:2,UTG1:3,MP:4,LJ:5,HJ:6,CO:7,BTN:8};
+const SEATN=['你','玩家 A','玩家 B','玩家 C','玩家 D','玩家 E','玩家 F','玩家 G','玩家 H'];
 const FACEKEY={'BB|BTN':'BB 面對 BTN 開池','BB|CO':'BB 面對 CO 開池','BB|UTG':'BB 面對 UTG 開池','BB|HJ':'BB 面對 CO 開池','BB|SB':'BB 面對 BTN 開池','BTN|CO':'BTN 面對 CO 開池','SB|BTN':'SB 面對 BTN 開池'};
 const GEN={
  g1:{R:"QQ+,AKs,AKo,A5s:0.3",C:"66+,ATs+,KJs+,QJs,JTs,T9s,AQo+"},
@@ -641,10 +651,10 @@ function wmaps(sc){
   for(const l of ALLMAP.keys()){const a=faceAct(sc,l);if(a.r>0)mR.set(l,a.r);if(a.c>0)mC.set(l,a.c)}
   return sc.wm={mR,mC};
 }
-let SIM={flop:false,hands:0,net:0,fol:{n:0,c:0},hint:true,btn:5,max:30,timer:null},G=null;
+let SIM={n:6,mode:'cash',levelHands:8,flop:false,hands:0,net:0,fol:{n:0,c:0},hint:true,btn:5,max:30,timer:null},G=null;
 const round2=x=>Math.round(x*2)/2,fmt=x=>(Math.round(x*10)/10).toString();
 const potNow=()=>G.players.reduce((s,p)=>s+p.total,0);
-const posName=i=>POSN[(i-SIM.btn+6)%6];
+const posName=i=>(G&&G.posOf&&G.posOf[i])||'';
 const slog=t=>G.log.push(t);
 const sample=a=>{const u=Math.random();return u<a.r?'r':u<a.r+a.c?'c':'f'};
 function combineMap(old,nw){
@@ -670,14 +680,15 @@ function canRaise(i){
 }
 /* ---- 策略建議（機器人與提示共用） ---- */
 function pfAdvice(i){
+  const sa=shortAdvice(i);if(sa)return sa;
   const p=G.players[i],l=handLabel(p.cards[0],p.cards[1]),pos=posName(i),r=G.pf.raises,pc=x=>Math.round(x*100)+'%';
   let acts,size=null,mR=null,mC=null,ctx='';
   if(r===0){
     if(pos==='BB'){acts={f:0,c:1,r:0};ctx='無人加注，大盲免費看牌'}
-    else{const f=RM[pos].get(l)||0;acts={f:1-f,c:0,r:f};size=pos==='SB'?3:2.5;mR=RM[pos];ctx=`${pos} 開池範圍`}
+    else{const rg=rangeFor(pos,G.nAlive),f=rg.get(l)||0;acts={f:1-f,c:0,r:f};size=pos==='SB'?3:2.5;mR=rg;ctx=`${pos} 開池範圍`}
   }else{
     let sc;
-    if(r===1){const op=posName(G.pf.opener);sc=FACE[FACEKEY[pos+'|'+op]]||(pos==='SB'?GEN.sb:GEN.g1);
+    if(r===1){const op=posName(G.pf.opener);sc=FACE[FACEKEY[p6(pos)+'|'+p6(op)]]||(pos==='SB'?GEN.sb:GEN.g1);
       const ip=PRANK[pos]>PRANK[op];size=round2(G.curBet*(ip?3:4));ctx=`面對 ${op} 開池（${ip?'有位置約 3 倍':'沒位置約 4 倍'}）`}
     else if(r===2){sc=GEN.g2;size=round2(G.curBet*2.3);ctx='面對 3-bet'}
     else{sc=GEN.g3;size=999;ctx='面對 4-bet 以上'}
@@ -1449,7 +1460,7 @@ function reviewHTML(rv,decs){
   const order=seenFlop.slice().sort((a,b)=>PRANK[rv.pl[a].pos]-PRANK[rv.pl[b].pos]);
   const ipK=order.length>1?order[order.length-1]:null;
   const hero=rv.pl[0];
-  const rows=rv.pl.map(p=>{
+  const rows=rv.pl.filter(p=>!p.dead).map(p=>{
     const lbl=p.style&&SIM.reveal?` <span class="tag">${STYLE_LBL[p.style]}</span>`:'';
     const st=p.fold?'棄牌':'打到最後';
     const ip=order.includes(p.k)?(p.k===ipK?'有位置（最後行動）':order.length>1?'沒位置':''):'—';
@@ -1488,6 +1499,619 @@ renderReplay=function(){
     d.innerHTML='<summary>🔍 所有人的牌與位置分析</summary>'+reviewHTML(r.review,r.dec);
     const p=document.querySelector('#h-rep .panel');if(p)p.appendChild(d);
   }
+};
+
+/* ============ 9 人桌、錦標賽（SNG）、ICM ============ */
+// ---- 位置與範圍（9 人桌新增位置；單挑範圍）----
+const AFTER_BB={0:[],1:['CO'],2:['HJ','CO'],3:['UTG','HJ','CO'],4:['UTG','LJ','HJ','CO'],5:['UTG','UTG1','LJ','HJ','CO'],6:['UTG','UTG1','MP','LJ','HJ','CO']};
+const RFI9={
+  UTG:"77+,ATs+,KQs,KJs:0.5,AQo+,AJo:0.3",
+  UTG1:"66+,ATs+,KJs+,QJs,JTs:0.5,AQo+,AJo:0.5",
+  MP:"55+,A9s+,A5s,KTs+,QTs+,JTs,T9s:0.5,AJo+,KQo",
+  LJ:"44+,A8s+,A5s,A4s:0.5,K9s+,Q9s+,J9s+,T9s,98s:0.5,ATo+,KQo,KJo:0.5"
+};
+const RM9={};for(const k in RFI9)RM9[k]=parseRange(RFI9[k]);
+const HU_R=parseRange("22+,A2s+,K2s+,Q2s+,J4s+,T6s+,96s+,85s+,75s+,64s+,54s,A2o+,K2o+,Q4o+,J7o+,T7o+,97o+,87o");
+const p6=pos=>({UTG1:'UTG',MP:'UTG',LJ:'HJ'}[pos]||pos);
+function rangeFor(pos,n){
+  if(n===2&&pos==='BTN')return HU_R;
+  if(n>=7&&RM9[pos])return RM9[pos];
+  return RM[pos]||RM.CO;
+}
+function posList(N){return ['BTN','SB','BB',...AFTER_BB[N-3]]}
+
+// ---- ICM（Malmuth–Harville）----
+function icmEq(stacks,payouts){
+  const ids=[];stacks.forEach((s,i)=>{if(s>1e-9)ids.push(i)});
+  const n=ids.length,res=stacks.map(()=>0);if(!n)return res;
+  const s=ids.map(i=>stacks[i]),P=[];for(let k=0;k<n;k++)P.push(payouts[k]||0);
+  let paid=0;P.forEach((x,k)=>{if(x>0)paid=k+1});
+  const memo=new Map();
+  function f(mask,place){
+    if(mask===0||place>=paid)return new Array(n).fill(0);
+    const key=mask*16+place;if(memo.has(key))return memo.get(key);
+    let tot=0;for(let i=0;i<n;i++)if(mask&(1<<i))tot+=s[i];
+    const out=new Array(n).fill(0);
+    for(let i=0;i<n;i++)if(mask&(1<<i)){
+      const p=s[i]/tot;out[i]+=p*P[place];
+      const sub=f(mask&~(1<<i),place+1);for(let j=0;j<n;j++)out[j]+=p*sub[j];
+    }
+    memo.set(key,out);return out;
+  }
+  const r=f((1<<n)-1,0);ids.forEach((id,k)=>{res[id]=r[k]});return res;
+}
+// 純函式：你（i）跟注對手（j）全下的 ICM 所需勝率。dead＝其他人留在底池的死錢。
+function icmCall(base,i,j,pay,dead){
+  const hero=base[i],vil=base[j],E=Math.min(hero,vil);
+  const eNow=icmEq(base,pay)[i];
+  const w=base.slice();w[i]=hero+E+dead;w[j]=vil-E;
+  const l=base.slice();l[i]=hero-E;l[j]=vil+E+dead;
+  const eW=icmEq(w,pay)[i],eL=icmEq(l,pay)[i];
+  const need=eW-eL>1e-9?(eNow-eL)/(eW-eL):0.5;
+  return {need:Math.max(0,Math.min(1,need)),bf:eW-eNow>1e-9?(eNow-eL)/(eW-eNow):1,eNow,eW,eL,chipNeed:E/(2*E+dead)};
+}
+function icmNeed(i,j){
+  const P=G.players,base=P.map(q=>q.dead?0:(q.folded?q.stack:q.stack+q.bet));
+  let dead=0;P.forEach((q,k)=>{if(k!==i&&k!==j&&q.folded&&!q.dead)dead+=q.total});
+  return icmCall(base,i,j,TN.payouts,dead);
+}
+
+// ---- 手牌強弱排序（Chen 公式近似）與全下範圍 ----
+function chen(l){
+  const r1=RANKS.indexOf(l[0]),r2=RANKS.indexOf(l[1]),hi=Math.max(r1,r2),lo=Math.min(r1,r2),suited=l[2]==='s',pair=l.length===2;
+  const pts=r=>r===12?10:r===11?8:r===10?7:r===9?6:(r+2)/2;
+  let s=pts(hi);
+  if(pair)return Math.ceil(Math.max(5,s*2))+hi*0.01;
+  if(suited)s+=2;
+  const gap=hi-lo-1;s-=gap===0?0:gap===1?1:gap===2?2:gap===3?4:5;
+  if(gap<=1&&hi<10)s+=1;
+  return Math.ceil(s)+hi*0.01+lo*0.001+(suited?0.0005:0);
+}
+let HAND_ORD=null;const PCT_CACHE={};
+function handOrder(){if(!HAND_ORD)HAND_ORD=[...ALLMAP.keys()].sort((a,b)=>chen(b)-chen(a));return HAND_ORD}
+const lcount=l=>l.length===2?6:l[2]==='s'?4:12;
+function pctMap(pct){
+  const key=Math.max(1,Math.min(100,Math.round(pct)));if(PCT_CACHE[key])return PCT_CACHE[key];
+  const m=new Map(),target=key/100*1326;let cum=0;
+  for(const l of handOrder()){if(cum>=target)break;const c=lcount(l),f=Math.min(1,(target-cum)/c);m.set(l,f);cum+=c}
+  return PCT_CACHE[key]=m;
+}
+const SHOVE_BASE={UTG:12,UTG1:13,MP:15,LJ:17,HJ:22,CO:30,BTN:45,SB:55,HU:75,BB:100};
+function shovePct(pos,eff){return Math.max(3,Math.min(100,(SHOVE_BASE[pos]||30)*Math.pow(10/Math.max(eff,2),0.9)))}
+function effStackBB(i){
+  const p=G.players[i];let m=0;G.players.forEach((q,k)=>{if(k!==i&&!q.folded)m=Math.max(m,q.stack+q.bet)});
+  return Math.min(p.stack+p.bet,m||p.stack+p.bet);
+}
+
+// ---- 錦標賽狀態 ----
+const BLIND_LEVELS=[[10,20],[15,30],[25,50],[50,100],[75,150],[100,200],[150,300],[200,400],[300,600],[400,800],[500,1000],[700,1400],[1000,2000],[1500,3000],[2000,4000]];
+let TN=null;
+SIM.sngHist=[];
+try{const h=JSON.parse(localStorage.getItem('gtoSng')||'[]');if(Array.isArray(h))SIM.sngHist=h}catch(e){}
+function startTournament(){
+  const n=SIM.n,pool=n*100,pcts=n===9?[0.5,0.3,0.2]:[0.65,0.35];
+  TN={chips:Array(n).fill(1500),level:0,handsInLevel:0,place:[],prize:[],payouts:pcts.map(p=>Math.round(p*pool)),over:false,heroPlace:null,bustedNow:[],logged:false};
+}
+function tournamentUpdate(){
+  const bb=G.bbAmt,start=G.players.map((p,k)=>k).filter(k=>!G.players[k].dead);
+  start.forEach(k=>{TN.chips[k]=Math.max(0,G.players[k].stack*bb)});
+  const busts=start.filter(k=>TN.chips[k]<=1e-6).sort((a,b)=>G.startStack[a]-G.startStack[b]);
+  let place=start.length;
+  busts.forEach(k=>{TN.chips[k]=0;TN.place[k]=place;TN.prize[k]=TN.payouts[place-1]||0;place--});
+  TN.bustedNow=busts;
+  const left=start.length-busts.length;
+  if(TN.chips[0]<=1e-6){TN.over=true;TN.heroPlace=TN.place[0]}
+  else if(left===1){const w=start.find(k=>TN.chips[k]>1e-6);TN.place[w]=1;TN.prize[w]=TN.payouts[0]||0;TN.over=true;TN.heroPlace=TN.place[0]}
+  if(TN.over&&!TN.logged){
+    TN.logged=true;
+    SIM.sngHist.push({t:Date.now(),n:SIM.n,place:TN.heroPlace,prize:TN.prize[0]||0,hands:SIM.hands});
+    try{localStorage.setItem('gtoSng',JSON.stringify(SIM.sngHist.slice(-100)))}catch(e){}
+  }
+  TN.handsInLevel++;
+  if(TN.handsInLevel>=SIM.levelHands&&TN.level<BLIND_LEVELS.length-1){TN.level++;TN.handsInLevel=0}
+}
+
+// ---- 短碼「推或棄牌」與全下跟注（含 ICM）建議 ----
+function shortAdvice(i){
+  if(SIM.mode!=='sng'||!TN||G.street!==0)return null;
+  const p=G.players[i],pos=posName(i),l=handLabel(p.cards[0],p.cards[1]),n=G.nAlive;
+  const rp=(n===2&&pos==='BTN')?'HU':pos,eff=effStackBB(i),pc=x=>Math.round(x*100)+'%';
+  const toCall=Math.min(G.curBet-p.bet,p.stack);
+  const jam=G.players.findIndex((q,k)=>k!==i&&!q.folded&&q.allin&&q.bet>p.bet+1e-9);
+  if(jam>=0){
+    const v=G.players[jam],vp=posName(jam),vrp=(n===2&&vp==='BTN')?'HU':vp,vpct=Math.round(shovePct(vrp,effStackBB(jam)));
+    const r=equity(p.cards,[],expand(pctMap(vpct)),700),eq=r?r.eq:0.5;
+    const ic=icmNeed(i,jam),need=ic.need,m=eq-need;
+    const acts=m>=0.03?{r:0,c:1,f:0}:m>-0.03?{r:0,c:.5,f:.5}:{r:0,c:0,f:1};
+    const text=`${l}（${pos}）面對 ${vp} 全下（${fmt(v.stack+v.bet)}bb，估計約前 ${vpct}% 的牌）：你的勝率 ≈ ${pc(eq)}｜籌碼期望所需 ${pc(ic.chipNeed)}｜<b>ICM 所需 ${pc(need)}</b>（氣泡因子 ${ic.bf.toFixed(2)}）｜跟注 ${pc(acts.c)} ／ 棄牌 ${pc(acts.f)}`;
+    return {acts,size:null,text,eq,mR:null,mC:null};
+  }
+  if(eff>18)return null;
+  if(pos==='BB'&&G.pf.raises===0)return null;
+  const pct=shovePct(rp,eff);
+  if(G.pf.raises===0){
+    const m=pctMap(pct),f=m.get(l)||0;
+    return {acts:{r:f,c:0,f:1-f},size:999,mR:m,mC:null,
+      text:`${l}（${pos}）有效籌碼 ${fmt(eff)}bb（推或棄牌區）：全下範圍約前 ${Math.round(pct)}%｜${f>0?'在範圍內 → 全下':'不在範圍內 → 棄牌'}｜全下 ${pc(f)} ／ 棄牌 ${pc(1-f)}`};
+  }
+  const m=pctMap(pct*0.5),f=m.get(l)||0;
+  return {acts:{r:f,c:0,f:1-f},size:999,mR:m,mC:null,
+    text:`${l}（${pos}）有效籌碼 ${fmt(eff)}bb，面對加注：只用最強約 ${Math.round(pct*0.5)}% 的牌再加注全下，其餘棄牌｜全下 ${pc(f)} ／ 棄牌 ${pc(1-f)}`};
+}
+
+// ---- 牌局引擎（支援 6／9 人、單挑、不等籌碼與邊池）----
+function aliveSeats(){
+  if(SIM.mode==='sng'&&TN)return TN.chips.map((c,k)=>c>1e-6?k:-1).filter(k=>k>=0);
+  return [...Array(SIM.n).keys()];
+}
+function nextAlive(from,alive){const N=SIM.n;for(let k=1;k<=N;k++){const j=(from+k)%N;if(alive.includes(j))return j}return from}
+function post(i,a){const p=G.players[i];a=Math.min(a,p.stack);p.stack-=a;p.bet=a;p.total=a;if(p.stack<=1e-9){p.stack=0;p.allin=true}}
+function newHand(){
+  clearTimeout(SIM.timer);if(G)clearTimeout(G.hTimer);
+  const N=SIM.n,sng=SIM.mode==='sng'&&TN,alive=aliveSeats();
+  let fl=null;
+  if(SIM.flop&&!sng){fl=pickFlopRoles();SIM.btn=fl.btn}else SIM.btn=nextAlive(SIM.btn,alive);
+  const d=shuffled(52),bbAmt=sng?BLIND_LEVELS[TN.level][1]:1;
+  G={players:[],full:d.slice(2*N,2*N+5),board:[],street:0,curBet:1,minRaise:1,over:false,reveal:false,pf:{raises:0,opener:-1,last:-1},pfMap:[],rng:[],decisions:[],log:[],last:[],winners:[],win:0,pay:[],flags:[],rec:[],seen:{},review:null,showAll:false,pb:0,pbets:[],holeAnim:true,info:null,hTimer:0,cur:0,adv:null,msg:'',nAlive:alive.length,bbAmt,startStack:[],posOf:[]};
+  for(let i=0;i<N;i++){
+    const live=alive.includes(i),st=live?(sng?TN.chips[i]/bbAmt:100):0;
+    G.players.push({name:SEATN[i],stack:st,bet:0,total:0,folded:!live,allin:false,acted:false,dead:!live,cards:live?[d[2*i],d[2*i+1]]:[]});
+    G.startStack.push(st);
+  }
+  const n=alive.length,order=[];let s=SIM.btn;for(let k=0;k<n;k++){order.push(s);s=nextAlive(s,alive)}
+  if(n===2){G.posOf[order[0]]='BTN';G.posOf[order[1]]='BB'}
+  else{G.posOf[order[0]]='BTN';G.posOf[order[1]]='SB';G.posOf[order[2]]='BB';const nm=AFTER_BB[n-3];for(let k=3;k<n;k++)G.posOf[order[k]]=nm[k-3]}
+  const sb=n===2?order[0]:order[1],bb=n===2?order[1]:order[2];
+  SIM.stats.forEach((st,k)=>{if(alive.includes(k))st.h++});sfx('deal');
+  post(sb,0.5);post(bb,1);
+  slog(`第 ${SIM.hands+1} 手：按鈕 ${SEATN[SIM.btn]}`+(sng?`｜盲注 ${BLIND_LEVELS[TN.level][0]}/${bbAmt}（你有 ${Math.round(TN.chips[0])} 籌碼）`:''));
+  if(fl)return setupFlop(fl);
+  G.cur=bb;after(bb);
+}
+function pickFlopRoles(){
+  const N=SIM.n,L=posList(N),P=L.filter(x=>x!=='SB'&&x!=='BB'),opPos=P[(Math.random()*P.length)|0],heroOpens=Math.random()<0.5;
+  const idx=heroOpens?L.indexOf(opPos):2;
+  return {heroOpens,opPos,btn:(N-idx)%N};
+}
+function setupFlop(fl){
+  const N=SIM.n,bb=(SIM.btn+2)%N,sb=(SIM.btn+1)%N,op=G.posOf.indexOf(fl.opPos);
+  G.players.forEach(p=>{p.folded=true;p.bet=0;p.total=0;p.stack=100});
+  [op,bb].forEach(k=>{const p=G.players[k];p.folded=false;p.stack=97.5;p.total=2.5});
+  G.players[sb].total=0.5;G.players[sb].stack=99.5;
+  G.pf={raises:1,opener:op,last:op};G.flags[op]={v:1,p:1};G.flags[bb]={v:1};SIM.stats[op].vpip++;SIM.stats[op].pfr++;SIM.stats[bb].vpip++;
+  G.pfMap[op]=rangeFor(fl.opPos,N);
+  G.pfMap[bb]=wmaps(FACE[FACEKEY['BB|'+p6(fl.opPos)]]||GEN.g1).mC;
+  const used=new Set();
+  const pick=m=>{const cs=expand(m).filter(x=>!used.has(x.a)&&!used.has(x.b));let u=Math.random()*cs.reduce((t,x)=>t+x.w,0),x=cs[cs.length-1];
+    for(const y of cs){u-=y.w;if(u<=0){x=y;break}}used.add(x.a);used.add(x.b);return [x.a,x.b]};
+  G.players[op].cards=pick(G.pfMap[op]);G.players[bb].cards=pick(G.pfMap[bb]);
+  const rest=shuffled(52).filter(c=>!used.has(c));
+  G.players.forEach((p,k)=>{if(k!==op&&k!==bb)p.cards=[rest.pop(),rest.pop()]});
+  G.full=rest.slice(0,5);
+  const nm=k=>k===0?'你':G.players[k].name;
+  slog(`翻後練習：${nm(op)}（${fl.opPos}）開池 2.5bb，${nm(bb)}（BB）跟注，底池 5.5bb`);
+  G.street=0;endStreet();
+}
+function newMatch(){assignStyles();SIM.hands=0;SIM.net=0;SIM.fol={n:0,c:0};if(SIM.mode==='sng')startTournament();else TN=null;newHand()}
+function setTable(n){SIM.n=n;newMatch()}
+function setMode(m){SIM.mode=m;newMatch()}
+function resetStats(){SIM.stats=Array.from({length:9},()=>({h:0,vpip:0,pfr:0,b:0,c:0}))}
+function assignStyles(){
+  const base=['tag','lag','station','gto','gto','tag','lag','gto'];
+  const pool=base.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]).slice(0,Math.max(0,(SIM.n||6)-1));
+  SIM.styles=[null,...pool];resetStats();
+}
+function after(i){
+  const N=G.players.length,live=G.players.map((p,k)=>k).filter(k=>!G.players[k].folded);
+  if(live.length===1)return finish(live,false);
+  for(let k=1;k<=N;k++){
+    const j=(i+k)%N,p=G.players[j];
+    if(!p.folded&&!p.allin&&(!p.acted||p.bet<G.curBet)){G.cur=j;return step()}
+  }
+  endStreet();
+}
+function endStreet(){
+  const N=G.players.length;
+  G.players.forEach(p=>{p.bet=0;p.acted=false});G.curBet=0;G.minRaise=1;G.last=[];
+  if(G.street===3)return showdown();
+  G.street++;G.board=G.full.slice(0,[0,3,4,5][G.street]);sfx('deal');G.seen[G.street]=G.players.map((p,k)=>k).filter(k=>!G.players[k].folded);
+  if(G.street===1)G.players.forEach((p,k)=>{if(!p.folded){const m=G.pfMap[k];G.rng[k]=expand(m&&m.size?m:ALLMAP)}});
+  slog(`—— ${['','翻牌','轉牌','河牌'][G.street]}：${G.board.map(cardStr).join(' ')}（底池 ${fmt(potNow())}bb）`);
+  const can=G.players.filter(p=>!p.folded&&!p.allin);
+  if(can.length<=1){render();SIM.timer=setTimeout(endStreet,900);return}
+  for(let k=1;k<=N;k++){const j=(SIM.btn+k)%N,p=G.players[j];if(!p.folded&&!p.allin){G.cur=j;break}}
+  step();
+}
+function distribute(){
+  const P=G.players,n=P.length,pay=new Array(n).fill(0),tot=P.map(p=>p.total);
+  const levels=[...new Set(tot.filter(t=>t>1e-9))].sort((a,b)=>a-b);let prev=0;
+  for(const lv of levels){
+    let amt=0;for(let k=0;k<n;k++)amt+=Math.max(0,Math.min(tot[k],lv)-prev);
+    let el=[];for(let k=0;k<n;k++)if(!P[k].folded&&tot[k]>=lv-1e-9)el.push(k);
+    if(!el.length){let m=-1;for(let k=0;k<n;k++)if(!P[k].folded&&tot[k]>m)m=tot[k];for(let k=0;k<n;k++)if(!P[k].folded&&tot[k]===m)el.push(k)}
+    if(el.length===1)pay[el[0]]+=amt;
+    else{const sc=el.map(k=>eval7([...P[k].cards,...G.full])),best=Math.max(...sc),w=el.filter((k,x)=>sc[x]===best);w.forEach(k=>{pay[k]+=amt/w.length})}
+    prev=lv;
+  }
+  return pay;
+}
+function showdown(){G.board=G.full.slice();G.reveal=true;finish(null,true)}
+function finish(_w,sd){
+  const pay=distribute(),n=G.players.length;
+  G.pay=pay;G.players.forEach((p,k)=>{p.stack+=pay[k]});
+  const winners=[];for(let k=0;k<n;k++)if(pay[k]>G.players[k].total+1e-9)winners.push(k);
+  if(!winners.length)for(let k=0;k<n;k++)if(pay[k]>1e-9)winners.push(k);
+  G.over=true;G.winners=winners;G.win=winners.length?pay[winners[0]]-G.players[winners[0]].total:0;
+  G.net=G.players[0].stack-G.startStack[0];SIM.hands++;SIM.net+=G.net;
+  slog((sd?'攤牌：':'')+winners.map(k=>`${G.players[k].name} 贏得 ${fmt(pay[k]-G.players[k].total)}bb`).join('、'));
+  clearTimeout(G.hTimer);
+  if(SIM.mode==='sng'&&TN)tournamentUpdate();
+  G.review=buildReview();saveHand(sd);
+  render();
+}
+const _buildReview=buildReview;
+buildReview=function(){const r=_buildReview();r.pl.forEach((p,k)=>{p.dead=!!G.players[k].dead});return r};
+
+// ---- 翻前範圍練習：6 / 9 人桌 ----
+let PRE_N=6;
+function curRM(){return PRE_N===9?{UTG:RM9.UTG,UTG1:RM9.UTG1,MP:RM9.MP,LJ:RM9.LJ,HJ:RM.HJ,CO:RM.CO,BTN:RM.BTN,SB:RM.SB}:RM}
+function curPOS(){return Object.keys(curRM())}
+function setPreN(n){PRE_N=n;preNew()}
+function preNew(){
+  const P=curPOS(),M=curRM();pre.pos=P[(Math.random()*P.length)|0];pre.answered=false;
+  let c1,c2;
+  if(Math.random()<0.5){
+    const bl=borderline(M[pre.pos]);const l=bl[(Math.random()*bl.length)|0];
+    const combos=expand(new Map([[l,1]]));const x=combos[(Math.random()*combos.length)|0];c1=x.a;c2=x.b;
+  }else{const d=shuffled(52);c1=d[0];c2=d[1]}
+  pre.hand=[c1,c2];renderPre();
+}
+function preAnswer(raise){
+  if(pre.answered)return;pre.answered=true;
+  const M=curRM(),l=handLabel(...pre.hand),f=M[pre.pos].get(l)||0;
+  const ok=raise?f>0:f<1;S.pre.n++;if(ok)S.pre.c++;save();
+  const tx=f===0?'標準答案：棄牌（不在範圍內）':f===1?'標準答案：加注（純策略）':`混合策略：約 ${Math.round(f*100)}% 加注 / ${Math.round((1-f)*100)}% 棄牌，兩者皆可`;
+  $('pre-res').innerHTML=`<div class="res ${ok?'ok':'bad'}"><b>${ok?'✔ 正確':'✘ 錯誤'}</b> — ${l}（${pre.pos}）<br>${tx}</div>`+gridHTML(M[pre.pos],l)+
+    `<div class="mut">綠色越深＝加注頻率越高；白框＝你的手牌。右上三角＝同花，左下三角＝不同花，對角線＝對子。</div>`;
+  $('pre-next').disabled=false;$('pre-r').disabled=$('pre-f').disabled=true;
+}
+function renderPre(){
+  const el=$('t-pre'),M=curRM(),P=curPOS();
+  if(!P.includes(pre.pos))pre.pos=P[0];
+  el.innerHTML=`<div class="panel"><div class="topbar"><h2 style="margin:0">翻前開池（RFI）練習</h2><div>
+    <button class="b ${PRE_N===6?'':'s'}" onclick="setPreN(6)">6 人桌</button><button class="b ${PRE_N===9?'':'s'}" onclick="setPreN(9)">9 人桌</button></div></div>
+  <div class="mut">${PRE_N}人桌、100bb 有效籌碼，前面所有人都棄牌，輪到你。決定：加注（開池）還是棄牌？範圍為常見圖表近似值，供建立直覺，不等同求解器輸出。${PRE_N===9?'9 人桌前位更緊（UTG 約 9%）。':''}</div>
+  <div style="margin-top:10px">位置：<b>${pre.pos}</b></div>
+  <div class="cards">${cardsHTML(pre.hand)}</div>
+  <button class="b g" id="pre-r">加注</button><button class="b r" id="pre-f">棄牌</button><button class="b s" id="pre-next" disabled>下一手牌</button>
+  <div id="pre-res"></div></div>
+  <div class="panel"><h2>檢視各位置範圍</h2><select id="pre-view">${P.map(p=>`<option>${p}</option>`).join('')}</select><div id="pre-grid"></div></div>`;
+  $('pre-r').onclick=()=>preAnswer(true);$('pre-f').onclick=()=>preAnswer(false);$('pre-next').onclick=preNew;
+  const upd=()=>{const p=$('pre-view').value;const n=expand(M[p]).reduce((s,x)=>s+x.w,0);$('pre-grid').innerHTML=gridHTML(M[p],'')+`<div class="mut">約 ${(n/1326*100).toFixed(1)}% 的手牌（加權）。</div>`};
+  $('pre-view').onchange=upd;$('pre-view').value=pre.pos;upd();
+}
+
+// ---- 牌桌座位排版（9 人桌用橢圓排列）----
+function seatLayout(n){
+  const mob=window.matchMedia&&matchMedia('(max-width:640px)').matches,rx=mob?41:44,ry=mob?40:38,cx=50,cy=47;
+  return Array.from({length:n},(_,k)=>{
+    const a=(90+360/n*k)*Math.PI/180,x=cx+rx*Math.cos(a),y=cy+ry*Math.sin(a);
+    return {x,y,bx:cx+(x-cx)*0.55,by:cy+(y-cy)*0.55,dx:cx+(x-cx)*0.74+3,dy:cy+(y-cy)*0.74};
+  });
+}
+function tbarHTML(){
+  if(!(SIM.mode==='sng'&&TN))return '';
+  const lv=BLIND_LEVELS[TN.level],nx=BLIND_LEVELS[Math.min(TN.level+1,BLIND_LEVELS.length-1)],n=SIM.n;
+  const alive=TN.chips.map((c,k)=>k).filter(k=>TN.chips[k]>1e-6),eq=icmEq(TN.chips,TN.payouts);
+  const tot=TN.chips.reduce((a,b)=>a+b,0),rank=alive.slice().sort((a,b)=>TN.chips[b]-TN.chips[a]).indexOf(0)+1;
+  const rows=alive.slice().sort((a,b)=>TN.chips[b]-TN.chips[a]).map(k=>`<tr><td>${k===0?'<b>你</b>':SEATN[k]}</td><td>${Math.round(TN.chips[k])}</td><td>${(TN.chips[k]/lv[1]).toFixed(1)}bb</td><td>${(TN.chips[k]/tot*100).toFixed(1)}%</td><td><b>${eq[k].toFixed(1)}</b></td></tr>`).join('');
+  return `<div class="res"><b>🏆 錦標賽（${n} 人 SNG）</b>　第 ${TN.level+1} 級 盲注 ${lv[0]}/${lv[1]}（${Math.max(0,SIM.levelHands-TN.handsInLevel)} 手後升到 ${nx[0]}/${nx[1]}）<br>
+  剩 ${alive.length}/${n} 人｜獎金（買入 100）前 ${TN.payouts.length} 名：${TN.payouts.join(' / ')}｜你的籌碼 ${Math.round(TN.chips[0])}（${(TN.chips[0]/lv[1]).toFixed(1)}bb）｜籌碼排名 ${TN.chips[0]>1e-6?rank+'/'+alive.length:'—'}
+  <details class="adv"><summary>ICM 獎金價值表（用目前籌碼估算）</summary><table class="t"><tr><th>玩家</th><th>籌碼</th><th>bb</th><th>籌碼佔比</th><th>ICM 價值</th></tr>${rows}</table>
+  <div class="mut">ICM 價值＝以籌碼比例估算每人能拿到的獎金期望；籌碼多的人，每個籌碼的價值會遞減。</div></details></div>`;
+}
+function renderSim(){
+  const el=$('t-sim');if(!G){el.innerHTML='';return}
+  const sng=SIM.mode==='sng'&&TN,N=SIM.n;
+  const hero=G.players[0],heroTurn=!G.over&&G.cur===0,toCall=Math.min(G.curBet-hero.bet,hero.stack);
+  const finished=sng?(TN.over&&G.over):(SIM.hands>=SIM.max&&G.over);
+  const pot=potNow(),streetName=['翻前','翻牌','轉牌','河牌'][G.street];
+  const L9=N===9?seatLayout(N):null;
+  const seats=G.players.map((p,k)=>{
+    const cls=['seat'];if(!L9)cls.push('s'+k);
+    if(p.folded)cls.push('fold');if(!G.over&&G.cur===k)cls.push('act');if(G.over&&G.winners.includes(k))cls.push('win');
+    const st=L9?` style="left:${L9[k].x.toFixed(1)}%;top:${L9[k].y.toFixed(1)}%"`:'';
+    if(p.dead){
+      return `<div class="${cls.join(' ')}"${st}><div class="box"><div class="nm">${p.name}</div><div class="stk" style="color:#8b9bab">淘汰${TN&&TN.place[k]?'（第 '+TN.place[k]+' 名）':''}</div></div></div>`;
+    }
+    const showCards=k===0||(G.reveal&&!p.folded);
+    let cards='';
+    if(k===0)cards=`<div class="hole">${cardsHTML(p.cards).replace(/class="card /g,G.holeAnim?'class="card deal ':'class="card ')}</div>`;
+    else if(!p.folded)cards=`<div class="hole">${p.cards.map(c=>miniCard(c,!showCards,G.holeAnim)).join('')}</div>`;
+    let hn='';
+    if(G.reveal&&!p.folded)hn=`<div class="hn">${HAND_NAMES[Math.floor(eval7([...p.cards,...G.full])/371293)]}</div>`;
+    const lastTxt=p.folded?'棄牌':(G.last[k]||'');
+    const win=G.over&&G.winners.includes(k)?`<div class="winl">WIN +${fmt(G.pay[k]-p.total)}</div>`:'';
+    return `<div class="${cls.join(' ')}"${st}>${cards}${hn}<div class="box"><div class="nm">${p.name} <span class="pos">${posName(k)}</span></div><div class="stk">${fmt(p.stack)} bb</div></div><div class="hud">${hudText(k)}</div><div class="la">${lastTxt}</div>${win}</div>`;
+  }).join('');
+  const bets=G.players.map((p,k)=>{
+    if(!(p.bet>0))return '';
+    const st=L9?` style="left:${L9[k].bx.toFixed(1)}%;top:${L9[k].by.toFixed(1)}%"`:'';
+    return `<div class="bet${L9?'':' b'+k}${G.pbets[k]!==p.bet?' pop':''}"${st}><i></i>${fmt(p.bet)}</div>`;
+  }).join('');
+  const board=[0,1,2,3,4].map(i=>G.board[i]!==undefined?(i>=G.pb?dealCls(cardHTML(G.board[i])):cardHTML(G.board[i])):G.over?cardHTML(G.full[i]).replace('class="card ','class="card dim '):'<span class="card ph"></span>').join('');
+  const dstyle=L9?` style="left:${L9[SIM.btn].dx.toFixed(1)}%;top:${L9[SIM.btn].dy.toFixed(1)}%"`:'';
+  const table=`<div class="tbl${L9?' t9':''}"><div class="felt"></div>${seats}${bets}<div class="dbtn${L9?'':' d'+SIM.btn}"${dstyle}>D</div>
+    <div class="center"><div class="potl"><i></i>底池 ${fmt(pot)} bb</div><div class="board">${board}</div><div class="stl">${streetName}${G.over&&G.board.length<5?' ｜ 灰色為未發出的牌（預覽）':''}</div></div></div>`;
+  let hint='',ctl='',info='';
+  if(heroTurn){
+    if(SIM.info&&G.info)info=infoHTML();
+    let tip='';
+    if(SIM.hint&&SIM.reveal){const v=mainVillain();if(v>0&&SIM.styles[v])tip=`<br><b>剝削建議</b>（${G.players[v].name}｜${STYLE_LBL[SIM.styles[v]]}）：${STYLE_TIP[SIM.styles[v]]}`}
+    hint=SIM.hint?`<div class="res"><b>GTO 提示（近似）${sng?' ・ 含 ICM':''}</b><br>${G.adv.text}${tip}<br><span class="mut">依範圍表與蒙地卡羅估算，非即時求解器輸出。</span></div>`
+      :`<div class="res warn">無提示模式：自行決定，賽後會顯示每個決策的建議對照。</div>`;
+    const cr=canRaise(0),full=hero.bet+hero.stack,min=Math.min(G.curBet+G.minRaise,full),ps=presets();
+    const init=Math.max(min,Math.min(full,ps.length?ps[0][1]:min));
+    ctl=`${SIM.timerOn?'<div class="tmr"><i style="animation-duration:20s"></i></div>':''}
+    <div class="abar"><button class="b r" onclick="heroAct('f')" ${toCall>0?'':'disabled'}>棄牌</button>
+    <button class="b g big" onclick="heroAct('c')">${toCall>0?'跟注 '+fmt(toCall)+(toCall>=hero.stack?'（全下）':''):'過牌'}</button></div>
+    ${cr?`<div class="rzbox"><div class="qb">${ps.map(([t,v])=>`<button class="b s" onclick="setRz(${v})">${t}</button>`).join('')}<button class="b s" onclick="setRz(${full})">全下</button></div>
+      <input type="range" id="rz" min="${min}" max="${full}" step="0.5" value="${init}" oninput="$('rzv').textContent=fmt(+this.value)+' bb'">
+      <button class="b big" onclick="heroRaise()">${G.curBet>0?'加注到':'下注'} <span id="rzv">${fmt(init)} bb</span></button></div>`:''}`;
+  }else if(!G.over)ctl=`<div class="mut">等待其他玩家行動…</div>`;
+  let rev='';
+  if(G.over){
+    const lines=G.decisions.map(d=>`<tr><td>${['翻前','翻牌','轉牌','河牌'][d.street]}</td><td>${d.ok?'✔':'✘'}</td><td>你選：${CATN[d.cat]}${d.ok?'':'（建議：'+CATN[d.best]+'）'}</td><td class="mut">${d.text}</td></tr>`).join('');
+    let fin='';
+    if(finished&&sng){
+      const pz=TN.prize[0]||0;
+      fin=`<div class="res ${TN.heroPlace<=TN.payouts.length?'ok':'bad'}"><b>🏁 錦標賽結束：你獲得第 ${TN.heroPlace} 名</b>｜獎金 ${pz}（買入 100，${pz>100?'獲利 +'+(pz-100):pz===100?'持平':'虧損 '+(pz-100)}）｜共打 ${SIM.hands} 手｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):0}%${SIM.reveal?'':'<br>對手風格：'+SIM.styles.slice(1).map((s,k)=>`${SEATN[k+1]} ${STYLE_LBL[s]}`).join('、')}</div>`;
+    }else if(finished){
+      fin=`<div class="res"><b>比賽結束</b>：${SIM.hands} 手，淨收益 ${SIM.net>=0?'+':''}${fmt(SIM.net)} bb（${(SIM.net/SIM.hands*100).toFixed(1)} bb/100）｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):0}%${SIM.reveal?'':'<br>對手風格：'+SIM.styles.slice(1).map((s,k)=>`${SEATN[k+1]} ${STYLE_LBL[s]}`).join('、')}</div>`;
+    }
+    const bust=sng&&TN.bustedNow&&TN.bustedNow.length&&!TN.over?`<div class="mut">本手淘汰：${TN.bustedNow.map(k=>`${SEATN[k]}（第 ${TN.place[k]} 名）`).join('、')}</div>`:'';
+    rev=`<div class="res ${G.net>=0?'ok':'bad'}"><b>本手結果：${G.net>=0?'+':''}${fmt(G.net)} bb</b></div>${bust}
+    ${lines?`<h2 style="margin-top:10px">本手決策檢討（建議頻率 ≥15% 視為符合）</h2><table class="t">${lines}</table>`:''}
+    <button class="b s" onclick="toggleAll()">${G.showAll?'收起所有人的牌與分析':'🔍 看所有人的牌與位置分析'}</button>${G.showAll&&G.review?reviewHTML(G.review,G.decisions):''}
+    ${fin}
+    ${finished?(sng?'<button class="b big" onclick="newMatch()">再打一場錦標賽</button>':''):'<button class="b big" onclick="newHand()">下一手牌</button>'}
+    <button class="b s" onclick="show(\'t-hist\')">看手牌歷史</button>`;
+  }
+  const T_=(k,l,on)=>`<button class="b ${on?'':'s'}" onclick="${k}">${on?'✔ ':''}${l}</button>`;
+  const counter=sng?`第 ${SIM.hands+(G.over?0:1)} 手｜符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):'—'}%（${SIM.fol.c}/${SIM.fol.n}）`:
+    `第 ${Math.min(SIM.hands+(G.over?0:1),SIM.max)}/${SIM.max} 手 ｜ 淨收益 ${SIM.net>=0?'+':''}${fmt(SIM.net)}bb ｜ 符合 GTO 建議 ${SIM.fol.n?Math.round(SIM.fol.c/SIM.fol.n*100):'—'}%（${SIM.fol.c}/${SIM.fol.n}）`;
+  el.innerHTML=`<div class="panel"><div class="topbar">
+    <div><button class="b ${SIM.hint?'':'s'}" onclick="setHint(true)">GTO 提示</button><button class="b ${SIM.hint?'s':''}" onclick="setHint(false)">無提示</button></div>
+    <div><button class="b s" onclick="newMatch()">重新開始</button></div></div>
+    <div class="topbar2"><select id="s-tn"><option value="6" ${N===6?'selected':''}>6 人桌</option><option value="9" ${N===9?'selected':''}>9 人桌</option></select>
+      <select id="s-tm"><option value="cash" ${SIM.mode==='cash'?'selected':''}>現金桌（每手重置 100bb）</option><option value="sng" ${SIM.mode==='sng'?'selected':''}>錦標賽 SNG（盲注遞增、有獎金）</option></select></div>
+    <details class="adv"><summary>⚙ 進階設定與說明</summary><div class="adv-body">
+      <div>${SIM.mode==='cash'?T_("setFlop(!SIM.flop)",'從翻牌開始',SIM.flop):''}${T_("tog('info')",'即時資訊',SIM.info)}${T_("tog('reveal')",'顯示對手風格',SIM.reveal)}${T_("tog('sound')",'🔊 音效',SIM.sound)}${T_("tog('timerOn')",'⏱ 20 秒倒數',SIM.timerOn)}</div>
+      <div>${SIM.mode==='cash'?`比賽手數：<select id="s-max" style="width:auto">${[10,20,30,50,100].map(n=>`<option ${n===SIM.max?'selected':''}>${n}</option>`).join('')}</select>（更改後請按「重新開始」）`:`升盲速度：<select id="s-lh" style="width:auto">${[5,8,12].map(n=>`<option value="${n}" ${n===SIM.levelHands?'selected':''}>每 ${n} 手升一級</option>`).join('')}</select>（更改後請按「重新開始」）`}</div>
+      <div class="mut" style="margin-top:6px">現金桌每手重置為 100bb；錦標賽起始 1500 籌碼，盲注 10/20 起，淘汰到剩一人或你被淘汰為止，無前注。對手用同一套近似策略（短碼會「推或棄牌」並考慮 ICM），不針對你調整。HUD：V＝入池率、P＝翻前加注率、AF＝翻後攻擊係數。對手各有隱藏風格，可從 HUD 推測。快捷鍵：F 棄牌、C 跟注/過牌、R 加注、A 全下。</div></div></details>
+    <div class="mut">${counter}</div></div>
+  ${tbarHTML()}
+  ${table}
+  <div class="panel">${info}${hint}${ctl}${rev}</div>
+  <div class="panel"><h2>牌局紀錄</h2><div class="mut" style="max-height:180px;overflow:auto">${G.log.slice().reverse().map(x=>`<div>${x}</div>`).join('')}</div></div>`;
+  $('s-tn').onchange=e=>setTable(+e.target.value);
+  $('s-tm').onchange=e=>setMode(e.target.value);
+  if($('s-max'))$('s-max').onchange=e=>{SIM.max=+e.target.value;renderSim()};
+  if($('s-lh'))$('s-lh').onchange=e=>{SIM.levelHands=+e.target.value;renderSim()};
+  G.pb=G.board.length;G.pbets=G.players.map(p=>p.bet);G.holeAnim=false;
+}
+
+/* ============ ICM 練習：計算機與「泡沫期跟注全下」題 ============ */
+const ICMS={sc:null,answered:false};
+const icmStat=()=>{S.icm=S.icm||{n:0,c:0};return S.icm};
+function icmGen(){
+  const pay=[50,30,20],rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  let last=null;
+  for(let t=0;t<30;t++){
+    const hero=rnd(10,30),vil=rnd(6,hero),a=rnd(12,40),b=rnd(12,40),base=[hero,vil,a,b],dead=1.5;
+    const ic=icmCall(base,0,1,pay,dead),vpct=Math.round(shovePct('BTN',vil)),rg=expand(pctMap(vpct));
+    let best=null;
+    for(let k=0;k<14;k++){
+      const d=shuffled(52),h=[d[0],d[1]],r=equity(h,[],rg,500);if(!r)continue;
+      const diff=Math.abs(r.eq-ic.need);if(!best||diff<best.diff)best={h,eq:r.eq,diff};
+    }
+    if(!best)continue;last={base,dead,pay,vpct,ic,hand:best.h,eq:best.eq};
+    if(best.diff<0.1)return last;
+  }
+  return last;
+}
+function icmNew(){ICMS.sc=icmGen();ICMS.answered=false;renderIcm()}
+function icmAnswer(call){
+  if(ICMS.answered)return;ICMS.answered=true;
+  const s=ICMS.sc,pc=x=>(x*100).toFixed(1)+'%',diff=s.eq-s.ic.need,close=Math.abs(diff)<0.015;
+  const right=diff>=0,ok=close||call===right;
+  const st=icmStat();st.n++;if(ok)st.c++;save();
+  const chipOK=s.eq>=s.ic.chipNeed;
+  $('icm-res').innerHTML=`<div class="res ${ok?'ok':'bad'}"><b>${ok?'✔ 正確':'✘ 錯誤'}</b> — ${close?'非常接近門檻，跟注或棄牌差異很小。':right?'你的勝率高於 ICM 所需勝率，跟注。':'你的勝率低於 ICM 所需勝率，應棄牌。'}<br>
+  你的勝率對對手全下範圍（約前 ${s.vpct}%）：<b>${pc(s.eq)}</b><br>
+  只看籌碼（籌碼 EV）所需勝率：<b>${pc(s.ic.chipNeed)}</b> → ${chipOK?'籌碼 EV 會跟注':'籌碼 EV 也會棄牌'}<br>
+  考慮 ICM 後所需勝率：<b>${pc(s.ic.need)}</b>（氣泡因子 ${s.ic.bf.toFixed(2)}）<br>
+  <span class="mut">你目前的 ICM 價值 ${s.ic.eNow.toFixed(1)}；贏了變 ${s.ic.eW.toFixed(1)}（+${(s.ic.eW-s.ic.eNow).toFixed(1)}），輸了變 ${s.ic.eL.toFixed(1)}（−${(s.ic.eNow-s.ic.eL).toFixed(1)}）。輸掉的損失大於贏到的收益，所以要更高的勝率才值得。</span></div>`;
+  $('icm-c').disabled=$('icm-f').disabled=true;
+}
+function icmCalcRun(){
+  const parse=s=>s.split(/[\s,，]+/).map(Number).filter(x=>!isNaN(x)&&x>=0);
+  const st=parse($('ic-st').value),pay=parse($('ic-pay').value),out=$('ic-out');
+  if(st.length<2||st.length>9||!pay.length){out.innerHTML='<div class="res bad">請輸入 2–9 個籌碼數字，以及至少一個獎金數字（用逗號分隔）。</div>';return}
+  const eq=icmEq(st,pay),tot=st.reduce((a,b)=>a+b,0),pool=pay.reduce((a,b)=>a+b,0);
+  out.innerHTML=`<table class="t"><tr><th>玩家</th><th>籌碼</th><th>籌碼佔比</th><th>ICM 價值</th><th>差異</th></tr>${st.map((s,i)=>{
+    const share=s/tot*pool;return `<tr><td>${String.fromCharCode(65+i)}</td><td>${s}</td><td>${(s/tot*100).toFixed(1)}%（若按比例 ${share.toFixed(1)}）</td><td><b>${eq[i].toFixed(1)}</b></td><td style="color:${eq[i]>=share?'#2ea66a':'#d9534f'}">${eq[i]-share>=0?'+':''}${(eq[i]-share).toFixed(1)}</td></tr>`}).join('')}</table>
+    <div class="mut">獎金總額 ${pool}；ICM 價值加總 ${eq.reduce((a,b)=>a+b,0).toFixed(1)}。「差異」＝ICM 價值 − 按籌碼比例分獎金；籌碼多的人為負，籌碼少的人為正。</div>`;
+}
+function renderIcm(){
+  if(!ICMS.sc)ICMS.sc=icmGen();
+  const s=ICMS.sc,st=icmStat(),names=['你','對手（BTN，全下）','玩家 C','玩家 D'],tot=s.base.reduce((a,b)=>a+b,0);
+  $('t-icm').innerHTML=`<div class="panel"><h2>ICM 練習：泡沫期要不要跟注全下？</h2>
+  <div class="mut">4 人剩餘、前 3 名有獎金（${s.pay.join(' / ')}），你們正在泡沫。對手全下，其餘盲注已棄牌（死錢 ${s.dead}bb），你覆蓋對手。只看籌碼可以跟，但考慮名次獎金後呢？</div>
+  <table class="t" style="margin-top:8px"><tr><th>玩家</th><th>籌碼（bb）</th><th>佔比</th></tr>${s.base.map((b,i)=>`<tr><td>${names[i]}</td><td>${b}</td><td>${(b/tot*100).toFixed(0)}%</td></tr>`).join('')}</table>
+  <div style="margin-top:8px">你的手牌：</div><div class="cards">${cardsHTML(s.hand)}</div>
+  <div class="mut">對手在 BTN、${s.base[1]}bb 全下，依籌碼深度估計他的範圍約前 <b>${s.vpct}%</b> 的牌。</div>
+  <button class="b g" id="icm-c" onclick="icmAnswer(true)">跟注</button><button class="b r" id="icm-f" onclick="icmAnswer(false)">棄牌</button><button class="b s" onclick="icmNew()">下一題</button>
+  <div id="icm-res"></div>
+  <div class="mut" style="margin-top:6px">累計 ${st.n} 題，正確率 ${st.n?Math.round(st.c/st.n*100):0}%。範圍為近似值；勝率用蒙地卡羅估算（約 ±2%）。</div></div>
+  <div class="panel"><h2>ICM 計算機</h2><div class="mut">輸入剩餘玩家的籌碼與獎金（逗號分隔），計算每人的 ICM 獎金價值。</div>
+  <label>籌碼</label><input type="text" id="ic-st" value="5000,3000,2000">
+  <label>獎金（第 1 名、第 2 名…）</label><input type="text" id="ic-pay" value="50,30,20">
+  <button class="b" onclick="icmCalcRun()">計算</button><div id="ic-out"></div></div>`;
+  icmCalcRun();
+}
+
+/* ============ 課程擴充：錦標賽（第 8–10 級） ============ */
+QGEN.icm=function(){
+  const sets=[[5000,3000,2000],[6000,3000,1000],[4000,4000,2000],[7000,2000,1000],[3500,3500,3000],[8000,1500,500]];
+  const st=sets[(Math.random()*sets.length)|0],pay=[50,30,20],k=(Math.random()*3)|0,eq=icmEq(st,pay),tot=st.reduce((a,b)=>a+b,0);
+  const nm=['A','B','C'],ans=Math.round(eq[k]),share=Math.round(st[k]/tot*100);
+  const set=[ans];[share,Math.round(100/3),ans+6,ans-6,ans+3].forEach(x=>{x=Math.max(1,Math.round(x));if(!set.includes(x)&&set.length<4)set.push(x)});
+  let z=ans+9;while(set.length<4){if(!set.includes(z))set.push(z);z++}
+  return {q:`3 人剩餘，獎金依序 50 / 30 / 20。籌碼：A ${st[0]}、B ${st[1]}、C ${st[2]}。玩家 <b>${nm[k]}</b> 的 ICM 獎金價值約為多少？`,opts:set.map(x=>x+''),a:0,
+    why:`ICM 價值：A ${eq[0].toFixed(1)}、B ${eq[1].toFixed(1)}、C ${eq[2].toFixed(1)}（加總 100）。${nm[k]} 的籌碼佔 ${share}%，若按比例分獎金會是 ${share}（因為總額 100），但實際 ICM 價值是 ${eq[k].toFixed(1)}：籌碼多的人被「打折」、籌碼少的人被「加成」。`};
+};
+QGEN.icmneed=function(){
+  const pay=[50,30,20],rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),hero=rnd(12,30),vil=rnd(8,hero),a=rnd(12,40),b=rnd(12,40);
+  const base=[hero,vil,a,b],ic=icmCall(base,0,1,pay,1.5),need=Math.round(ic.need*100),chip=Math.round(ic.chipNeed*100);
+  const set=[need];[chip,50,need+7,need-7].forEach(x=>{if(x>0&&x<100&&!set.includes(x)&&set.length<4)set.push(x)});let z=need+3;while(set.length<4){if(!set.includes(z))set.push(z);z++}
+  return {q:`4 人剩餘、前 3 名有獎金（50 / 30 / 20）。籌碼（bb）：你 ${hero}、對手 ${vil}（全下）、C ${a}、D ${b}；底池另有 1.5bb 死錢。你覆蓋對手並考慮跟注。<b>考慮 ICM 後</b>，至少需要多少勝率？`,
+    opts:set.map(x=>x+'%'),a:0,
+    why:`只看籌碼的所需勝率約 ${chip}%（${chip}% 是把籌碼當成現金算出來的）。但輸掉會損失 ${(ic.eNow-ic.eL).toFixed(1)} 的獎金價值，贏了只增加 ${(ic.eW-ic.eNow).toFixed(1)}，所以 ICM 所需勝率 = 損失 ÷（損失 + 收益）≈ ${need}%（氣泡因子 ${ic.bf.toFixed(2)}）。`};
+};
+COURSE.push(
+{t:'錦標賽基礎',goal:'理解錦標賽與現金桌的差別、籌碼深度與獎金結構',lessons:[
+ {id:'8.1',t:'錦標賽 vs 現金桌',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>多數線上錦標賽（MTT、SNG）和現金桌最大的差別：<b>籌碼不能直接換成現金，名次才決定獎金</b>。</p>
+  <ul><li><b>買入與獎金池</b>：每人付相同買入，獎金池由名次靠前的人分，通常只有前 10–15% 有獎（SNG 常是前 2–3 名）。</li>
+  <li><b>淘汰</b>：輸光籌碼就出局，無法再補（本練習器為此類）。</li>
+  <li><b>盲注遞增</b>：盲注定時上升，同樣的籌碼會越來越「淺」，逼你行動。</li>
+  <li><b>名次先於籌碼</b>：活到獎金圈本身就有價值。</li></ul>
+  <h3>本練習器的錦標賽（SNG）</h3>
+  <table class="t"><tr><th>人數</th><th>起始籌碼</th><th>獎金池（買入 100）</th><th>獎金</th></tr><tr><td>9 人</td><td>1500</td><td>900</td><td>前 3 名：450 / 270 / 180</td></tr><tr><td>6 人</td><td>1500</td><td>600</td><td>前 2 名：390 / 210</td></tr></table>
+  <div class="mut">盲注從 10/20 開始，每隔固定手數升級；無前注。獎金結構為教學用的簡化設定。</div>`,
+  quiz:[Q('錦標賽和現金桌最大的不同是？',['牌型不一樣','籌碼不能直接換現金，名次決定獎金','不能加注','不用付買入'],1,'錦標賽用籌碼累積存活，最後依名次分配獎金，籌碼本身不是現金。'),
+        Q('盲注遞增會讓以 bb 計的有效籌碼？',['越來越深','越來越淺','不變','隨機'],1,'籌碼不變、盲注變大，以 bb 計就變淺。'),
+        Q('9 人 SNG，獎金池 900，第一名拿 450，第一名占獎金池？',['25%','33%','50%','75%'],2,'450 ÷ 900 = 50%。')]},
+ {id:'8.2',t:'籌碼深度與 M 值',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>錦標賽的策略首先看「<b>有效籌碼是幾個大盲（bb）</b>」。</p>
+  <table class="t"><tr><th>籌碼深度</th><th>名稱</th><th>策略重點</th></tr>
+  <tr><td>40bb 以上</td><td>深碼</td><td>接近現金桌打法，可玩翻後</td></tr><tr><td>20–40bb</td><td>中碼</td><td>翻前加注更精簡，避免無謂的小底池</td></tr>
+  <tr><td>10–20bb</td><td>短碼</td><td>開始「加注全下」或棄牌，翻後空間有限</td></tr><tr><td>10bb 以下</td><td>極短碼</td><td>幾乎只有「全下或棄牌」</td></tr></table>
+  <h3>M 值</h3><p><b>M = 籌碼 ÷（小盲 + 大盲 + 前注）</b>，代表你還能撐幾輪盲注。例：籌碼 1200、盲注 50/100、無前注，M = 1200 ÷ 150 = 8，也就是 12bb。</p>
+  <p>盲注升級後，同樣的籌碼會落到更淺的區間——不動的人會被盲注慢慢吃掉。</p>`,
+  quiz:[Q('籌碼 3000、盲注 100/200，有效籌碼約是幾 bb？',['10bb','15bb','20bb','30bb'],1,'3000 ÷ 200 = 15bb。'),
+        Q('籌碼 3000、盲注 100/200、無前注，M 值是？',['5','10','15','30'],1,'M = 3000 ÷（100 + 200）= 10。'),
+        Q('15bb 通常屬於哪個區間？',['深碼','中碼','短碼','極短碼'],2,'10–20bb 是短碼區，開始偏向加注全下或棄牌。')]},
+ {id:'8.3',t:'獎金結構與泡沫期',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>錦標賽的獎金是<b>階梯狀</b>的：名次差一名，獎金可能差很多。</p>
+  <table class="t"><tr><th>名次（9 人 SNG）</th><th>獎金</th><th>與下一名差距</th></tr><tr><td>第 1 名</td><td>450</td><td>比第 2 名多 180</td></tr><tr><td>第 2 名</td><td>270</td><td>比第 3 名多 90</td></tr><tr><td>第 3 名</td><td>180</td><td>比第 4 名多 180</td></tr><tr><td>第 4 名以後</td><td>0</td><td>—</td></tr></table>
+  <h3>泡沫期（bubble）</h3><p>離獎金圈只差<b>一個人被淘汰</b>的階段。此時被淘汰的後果最重（從有獎變成沒獎），所以每個人都比平常保守，這會改變正確的打法（第 9 級會學）。</p>
+  <p>另一個重點：<b>多拿一倍籌碼，並不會讓你的獎金期望變成兩倍</b>。這就是下一級 ICM 要處理的。</p>`,
+  quiz:[Q('9 人 SNG（450 / 270 / 180），第 3 名淘汰拿到多少？',['0','90','180','270'],2,'前 3 名有獎，第 3 名是 180。'),
+        Q('「泡沫期」指的是？',['比賽剛開始','離獎金圈只差一人被淘汰','只剩兩人','盲注最小的時候'],1,'再淘汰一人就全部進入獎金圈的階段。'),
+        Q('在錦標賽中，籌碼增加一倍，獎金期望通常？',['剛好增加一倍','增加不到一倍','增加超過一倍','不會變'],1,'獎金期望對籌碼是遞減的（凹函數），所以不到一倍。')]}
+]},
+{t:'短碼與 ICM',goal:'會推或棄牌、理解 ICM，並在泡沫期正確決定要不要跟注全下',lessons:[
+ {id:'9.1',t:'推或棄牌（Push / Fold）',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>有效籌碼約 <b>10–15bb 以下</b>，通常只有兩個選擇：<b>全下</b>或<b>棄牌</b>。小加注容易被 3-bet 全下逼退，浪費籌碼。</p>
+  <h3>全下為什麼賺錢？</h3><div class="res"><b>EV(全下) = 對手棄牌率 × 底池 +（1 − 棄牌率）×［勝率 ×（底池 + 對手跟注額）− 敗率 × 你的全下額］</b></div>
+  <p>例：全下 8bb，底池 1.5bb，對手 50% 棄牌，被跟注時你有 50% 勝率：EV = 0.5×1.5 + 0.5×［0.5×(1.5+8) − 0.5×8］= 0.75 + 0.375 = <b>+1.125bb</b>。光是對手會棄牌就讓全下賺錢。</p>
+  <h3>範圍怎麼調整？</h3><ul><li><b>位置越後、籌碼越淺 → 全下範圍越寬</b>。</li>
+  <li>本練習器的近似值（10bb）：UTG 約 12%、CO 約 30%、BTN 約 45%、SB 約 55%；籌碼更淺（5bb）BTN 超過 80%。</li><li>在 SB 只需面對 BB 一人，範圍最寬。</li></ul>
+  <div class="mut">這些是用手牌強弱排序做的近似，不是精確的納許均衡推或棄牌表；要精確數字請使用專門的 push/fold 求解器。</div>`,
+  quiz:[Q('全下 8bb，底池 1.5bb，對手 50% 棄牌，被跟注時勝率 50%。全下的 EV 約為？',['0','+0.4bb','+1.1bb','−1bb'],2,'0.5×1.5 + 0.5×(0.5×9.5 − 0.5×8) = 1.125bb。'),
+        Q('為什麼籌碼很淺時不建議小加注？',['規則不允許','容易被再加注全下逼退，白白損失籌碼','因為會變成現金桌','因為比較便宜'],1,'小加注後被全下就難以跟注，所以直接全下或棄牌更有效率。'),
+        Q('同樣是 10bb，哪個位置的全下範圍通常最寬？',['UTG','HJ','CO','SB（只剩 BB）'],3,'SB 只需面對 BB 一人，全下範圍最寬。')]},
+ {id:'9.2',t:'ICM：籌碼不等於獎金',prac:[['ICM 練習','t-icm']],
+  body:()=>{
+    const st=[5000,3000,2000],eq=icmEq(st,[50,30,20]),tot=10000;
+    return `<p><b>ICM（Independent Chip Model）</b>用籌碼比例估算每個人拿到各名次的機率，再算出<b>獎金期望（$EV）</b>。</p>
+    <h3>範例：3 人剩餘，獎金 50 / 30 / 20</h3>
+    <table class="t"><tr><th>玩家</th><th>籌碼</th><th>籌碼佔比</th><th>若按比例分獎金</th><th>ICM 價值</th></tr>
+    ${st.map((s,i)=>`<tr><td>${'ABC'[i]}</td><td>${s}</td><td>${(s/tot*100).toFixed(0)}%</td><td>${(s/tot*100).toFixed(1)}</td><td><b>${eq[i].toFixed(1)}</b></td></tr>`).join('')}</table>
+    <p>A 擁有 50% 的籌碼，但 ICM 價值只有 <b>${eq[0].toFixed(1)}</b>；C 只有 20% 籌碼，ICM 價值卻有 <b>${eq[2].toFixed(1)}</b>。</p>
+    <h3>核心結論</h3><ul><li>籌碼的價值是<b>遞減</b>的：贏到 1000 籌碼增加的獎金，小於輸掉 1000 籌碼損失的獎金。</li>
+    <li>所以<b>輸的代價大於贏的好處</b>，跟注全下要更高的勝率才值得。</li><li>每個決策應看<b>獎金期望（$EV）</b>，而不是只看籌碼期望。</li></ul>
+    <p>你可以用「ICM 練習」分頁的計算機，輸入任意籌碼與獎金來驗證。</p>`;
+  },
+  quiz:[G_('icm'),G_('icm'),Q('ICM 的核心結論是？',['籌碼越多越賺','輸掉籌碼的損失大於贏得同量籌碼的收益','只有第一名有價值','籌碼和獎金成正比'],1,'獎金期望對籌碼是凹函數，輸比贏更傷。')]},
+ {id:'9.3',t:'泡沫期與氣泡因子',prac:[['ICM 練習','t-icm']],
+  body:()=>`<p>在 ICM 下，跟注全下所需的勝率是：</p>
+  <div class="res"><b>ICM 所需勝率 = 損失 ÷（損失 + 收益）</b>　（損失、收益都用「獎金期望」計算）</div>
+  <p><b>氣泡因子（Bubble Factor）= 損失 ÷ 收益</b>。氣泡因子 1 代表跟現金桌一樣；2 代表輸的代價是贏的兩倍，所需勝率約 67%。</p>
+  <h3>泡沫期的策略</h3><ul>
+  <li><b>大籌碼</b>：對手害怕被淘汰，你可以更寬地全下施壓，也可以放心用寬範圍跟注小籌碼的全下。</li>
+  <li><b>中籌碼</b>：最保守的一群，避免和大籌碼、甚至另一個中籌碼硬碰。</li>
+  <li><b>短籌碼</b>：快被盲注吃掉，通常要尋找機會全下，不能一直等。</li></ul>
+  <div class="mut">練習器的「模擬比賽 → 錦標賽」在面對全下時，會顯示籌碼期望所需勝率與 ICM 所需勝率，可直接對照。</div>`,
+  quiz:[G_('icmneed'),Q('氣泡因子大於 1 代表？',['贏的好處大於輸的代價','輸的代價大於贏的好處','跟現金桌一樣','不能跟注'],1,'氣泡因子 = 損失 ÷ 收益，大於 1 表示輸得比贏得更痛。'),
+        Q('泡沫期通常最保守的是哪種籌碼？',['大籌碼','中籌碼','極短籌碼','都一樣'],1,'中籌碼既怕被淘汰，又能被大籌碼施壓，最需要小心。')]},
+ {id:'9.4',t:'面對全下：跟注的思考步驟',prac:[['ICM 練習','t-icm']],
+  body:()=>`<p>面對對手全下時，可以依序問自己：</p>
+  <ol><li><b>對手的範圍</b>：他在什麼位置？有效籌碼多深？淺碼 + 後位 = 範圍很寬。</li>
+  <li><b>我的勝率</b>：我的手牌對那個範圍有多少勝率？（練習器用蒙地卡羅算給你）</li>
+  <li><b>所需勝率</b>：只看籌碼是多少？考慮 ICM 是多少？</li>
+  <li><b>比較</b>：勝率高於所需勝率就跟注，低於就棄牌。</li>
+  <li><b>後果</b>：輸了會不會被淘汰？贏了能不能躍升名次？</li></ol>
+  <p>常見錯誤：只看「底池賠率很好」就跟注，卻忘了輸掉的獎金代價更大。</p>`,
+  quiz:[Q('面對全下，第一個要判斷的是？',['對手的長相','對手的範圍（位置與籌碼）','我的籌碼排名','底池有多大'],1,'先估計對手能全下哪些牌，才能算出勝率。'),
+        Q('我的勝率對對手範圍是 38%，籌碼 EV 所需 33%、ICM 所需 45%，應該？',['跟注','棄牌','全下','兩者皆可'],1,'38% 低於 ICM 所需的 45%，應棄牌；只看籌碼會誤判。'),
+        Q('「只看底池賠率」在錦標賽泡沫期的風險是？',['沒有風險','低估輸掉的獎金代價','高估對手範圍','算錯底池'],1,'籌碼賠率沒有考慮獎金期望的不對稱。')]}
+]},
+{t:'後期與名次博弈',goal:'理解決賽桌動態、單挑，以及名次博弈中的風險與均衡',lessons:[
+ {id:'10.1',t:'決賽桌與大小籌碼互動',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>接近獎金階梯時，每個人的決策都會互相影響：</p>
+  <ul><li><b>大籌碼</b>是「施壓者」：能對中小籌碼持續全下或大加注，因為對方怕被淘汰。</li>
+  <li><b>中籌碼</b>是「被擠壓者」：要避免輸給大籌碼，但也不能完全不動，否則被盲注吃掉。</li>
+  <li><b>短籌碼</b>是「等待者或搏命者」：要看自己離下一個獎金階梯有多遠，以及盲注何時會吃掉自己。</li></ul>
+  <h3>看階梯（Pay Jump）</h3><p>下一個名次的獎金差越大，越值得「等別人先被淘汰」；差越小，越值得提高籌碼去爭第一。</p>`,
+  quiz:[Q('為什麼大籌碼在泡沫期能施壓？',['規則賦予特權','中小籌碼怕被淘汰，不敢跟注','大籌碼不用付盲注','大籌碼牌一定比較好'],1,'對手的氣泡因子高，被迫棄牌更多。'),
+        Q('離下一個名次的獎金差距很大時，短籌碼通常傾向？',['立刻亂全下','在合理範圍內等別人先被淘汰','必定跟注','退出比賽'],1,'獎金階梯大時，保住名次更有價值。'),
+        Q('中籌碼最常見的困境是？',['沒有牌','被大籌碼擠壓，又怕被盲注吃掉','無法加注','不能全下'],1,'兩邊都有壓力：怕輸給大籌碼，也不能太被動。')]},
+ {id:'10.2',t:'單挑（Heads-up）策略',prac:[['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>剩最後兩人時：</p>
+  <ul><li><b>位置</b>：按鈕位同時是小盲，<b>翻前先行動、翻後最後行動</b>；大盲翻前最後行動、翻後先行動。</li>
+  <li><b>範圍很寬</b>：按鈕位開池可達 70–80% 的牌；大盲防守也很寬。只有兩個人，牌平均起來就變弱，所以「很多牌都值得打」。</li>
+  <li><b>ICM 變簡單</b>：兩人時獎金 ＝ 第 2 名獎金 +（第 1 名 − 第 2 名）× 籌碼佔比，是<b>線性</b>的，所以此時籌碼 EV 和獎金 EV 一致（氣泡因子約等於 1）。</li></ul>
+  <p>也因此，單挑時可以回到「用籌碼期望決策」，不必再為淘汰風險額外保守。</p>`,
+  quiz:[Q('單挑時，按鈕位翻前的行動順序是？',['最後行動','最先行動','不行動','看籌碼'],1,'按鈕位同時是小盲，翻前先行動；翻後則最後行動。'),
+        Q('為什麼單挑時範圍可以很寬？',['規則允許','只有一個對手，隨機兩張牌的平均強度相對更高','盲注很小','沒有位置'],1,'只需要贏一個人，很多牌都有足夠勝率。'),
+        Q('單挑時 ICM 價值對籌碼是？',['凹函數（遞減）','線性','凸函數','無關'],1,'兩人時獎金期望 = 第 2 名獎金 + 籌碼佔比 ×（第 1 名 − 第 2 名），是線性的。')]},
+ {id:'10.3',t:'名次博弈論',prac:[['ICM 練習','t-icm'],['打一場錦標賽（模擬比賽）','t-sim']],
+  body:()=>`<p>把錦標賽看成一場<b>名次的博弈</b>：獎金固定，你的名次取決於所有人的決策。</p>
+  <h3>1. 風險態度來自獎金結構</h3><p>因為獎金期望對籌碼是凹的，等於每個玩家在<b>風險趨避</b>（寧可穩定也不賭）。越接近獎金階梯，越明顯。</p>
+  <h3>2. 均衡與剝削</h3><ul><li>兩人短碼的推或棄牌有已知的納許均衡；多人情況複雜得多，均衡不唯一，而且常常有人會被「剝削」。</li>
+  <li>如果大家都過度保守，大籌碼把壓力轉成收益；如果大家都過度積極，保守的人反而能賺。</li></ul>
+  <h3>3. ICM 的限制</h3><ul><li>假設每個人贏下每手牌的機率只由籌碼決定，<b>忽略位置、技術差距與未來盲注壓力</b>。</li>
+  <li>強的玩家實際上能把籌碼轉成更多名次價值，所以 ICM 對技術較好的人可能略微「過度保守」。</li></ul>
+  <h3>4. 如何使用</h3><p>把 ICM 當作<b>估算工具</b>：判斷大概該更緊還是更鬆，而不是精確答案。再用對手風格與位置微調。</p>`,
+  quiz:[Q('獎金期望對籌碼是凹函數，意味著玩家傾向？',['風險愛好','風險趨避（保守）','不在乎','只看第一名'],1,'凹函數代表輸的代價大於贏的好處，所以偏向保守。'),
+        Q('ICM 的主要限制是？',['不能計算','忽略位置、技術差距與盲注壓力','只能算兩人','只能算現金'],1,'ICM 只用籌碼比例估算，沒有考慮其他實戰因素。'),
+        Q('多人錦標賽的均衡比起兩人推或棄牌？',['更簡單','更複雜，且不唯一','完全一樣','不存在'],1,'多人加上獎金結構，策略互動複雜很多。')]},
+ {id:'10.4',t:'錦標賽決策清單與總整理',prac:[['打一場錦標賽（模擬比賽）','t-sim'],['手牌歷史','t-hist']],
+  body:()=>`<p>每次做重要決策前，快速走一遍：</p>
+  <ol><li><b>有效籌碼</b>幾 bb？（深碼、中碼、短碼、極短碼）</li><li><b>位置</b>：後面還有幾個人？我有沒有位置？</li>
+  <li><b>名次與獎金</b>：還剩幾人？離獎金圈或下一個階梯多遠？</li>
+  <li><b>對手籌碼與風格</b>：誰能淘汰我？誰怕被淘汰？</li><li><b>ICM 壓力</b>：氣泡因子大概多高？</li>
+  <li><b>期望值</b>：勝率對所需勝率（含 ICM）。</li></ol>
+  <h3>練習建議</h3><ul><li>先打幾場 6 人 SNG，再挑戰 9 人 SNG。</li><li>每場結束，開「手牌歷史」複盤你的短碼全下與泡沫期跟注。</li>
+  <li>用「ICM 練習」分頁反覆練習泡沫期跟注，把「所需勝率」變成直覺。</li></ul>
+  <div class="res warn">本練習器為教學工具，沒有真錢；範圍、獎金結構與 ICM 都是簡化設定，不保證獲利。</div>`,
+  quiz:[Q('做錦標賽決策時，第一件要看的是？',['對手的暱稱','有效籌碼是幾 bb','今天運氣','桌面顏色'],1,'籌碼深度決定可用的策略類型。'),
+        Q('泡沫期最需要額外考慮的是？',['發牌速度','ICM 壓力（輸掉的獎金代價）','牌桌音效','手牌花色'],1,'氣泡因子讓所需勝率比現金桌更高。'),
+        Q('複盤時，最值得回頭看的是？',['每一手的輸贏','短碼全下與泡沫期的關鍵決策','只看贏的手牌','不用複盤'],1,'這些決策對名次與獎金影響最大。')]}
+]}
+);
+const _pracList=pracList;
+pracList=function(l){
+  if(l<8)return _pracList(l);
+  const sh=SIM.sngHist||[],ic=icmStat(),pct=(c,n)=>n?Math.round(c/n*100):0,P=[];
+  const paid=x=>x.place<=(x.n===9?3:2);
+  if(l===8)P.push({t:`完成 1 場錦標賽（目前 ${sh.length} 場）`,ok:sh.length>=1});
+  if(l===9)P.push({t:`ICM 練習：至少 20 題、正確率 ≥ 70%（目前 ${ic.n} 題，${pct(ic.c,ic.n)}%）`,ok:ic.n>=20&&ic.c/ic.n>=.7});
+  if(l===10){P.push({t:`打完 3 場以上錦標賽（目前 ${sh.length} 場）`,ok:sh.length>=3});P.push({t:`進入獎金圈至少 1 次（目前 ${sh.filter(paid).length} 次）`,ok:sh.filter(paid).length>=1})}
+  return P;
 };
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
