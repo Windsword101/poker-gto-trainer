@@ -1,6 +1,6 @@
 // 離線快取：預先快取核心檔案，之後優先用快取並在背景更新。
 // VERSION 由建置流程依 index.html 內容雜湊自動寫入，內容有變就會換版並通知頁面。
-const VERSION = '9c16da3f';
+const VERSION = '3024df76';
 const CACHE = 'gto-trainer-' + VERSION;
 const ASSETS = [
   './',

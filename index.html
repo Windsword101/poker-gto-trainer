@@ -212,6 +212,17 @@ input.err,select.err{border-color:var(--bad)!important;outline:1px solid var(--b
 .sum ul{margin:6px 0 8px;padding-left:20px}
 .mcard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;line-height:1.7}
 .mcard .b{margin-top:6px}
+.when{background:#2a2438;border-left:4px solid #9b7bd6;border-radius:8px;padding:9px 12px;margin:10px 0;line-height:1.7;font-size:14px}
+.when ul{margin:6px 0 0;padding-left:20px}
+.newterms{background:#0f1720;border:1px dashed var(--acc);border-radius:8px;padding:9px 12px;margin:10px 0;font-size:13.5px;line-height:1.7}
+.newterms>div{margin-top:3px}
+.term{border-bottom:1px dotted var(--acc);cursor:help;color:inherit}
+.term:focus-visible{outline:2px solid #ffd54a}
+#termpop{position:fixed;z-index:80;background:#0f1720;border:1px solid var(--acc);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.6;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+#termpop a{display:inline-block;margin-top:4px;font-size:12.5px}
+.whenbox{background:#1a2733;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 12px;font-size:13.5px}
+.whenbox>summary{cursor:pointer;font-weight:600}.whenbox ul{margin:6px 0 2px;padding-left:20px;line-height:1.7}
+body.simfull #whenbox{display:none!important}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -353,7 +364,7 @@ function save(){try{localStorage.setItem('gtoTrainer',JSON.stringify(S))}catch(e
 
 /* ============ 分頁 ============ */
 const GROUPS=[
- {k:'learn',icon:'📚',name:'學習',tabs:[['t-course','新手路徑'],['t-learn','翻前教學'],['t-demo','示範牌局'],['t-guide','規則與術語']]},
+ {k:'learn',icon:'📚',name:'學習',tabs:[['t-course','新手路徑'],['t-learn','翻前教學'],['t-demo','示範牌局'],['t-guide','速查手冊']]},
  {k:'practice',icon:'🎯',name:'練習',tabs:[['t-pre','翻前範圍'],['t-eq','勝率預測'],['t-pot','底池賠率'],['t-calc','計算機']]},
  {k:'play',icon:'♠',name:'對戰',tabs:[['t-sim','模擬比賽']]},
  {k:'adv',icon:'⭐',name:'進階',tabs:[['t-adv','進階課程'],['t-scn','情境練習'],['t-icm','ICM 練習'],['t-kuhn','CFR 演示'],['t-paper','論文索引']]},
@@ -2747,7 +2758,7 @@ COURSE[0]={t:'規則與牌感',goal:'看懂牌局流程、牌型大小、下注�
 <table class="t"><tr><th>情境</th><th>底池</th></tr>
 <tr><td>BTN 開池 2.5bb，BB 跟注，SB 棄牌</td><td>2.5 + 2.5 + 0.5 = <b>5.5bb</b></td></tr>
 <tr><td>CO 開池 2.5bb，BTN 跟注，SB、BB 棄牌</td><td>2.5 + 2.5 + 0.5 + 1 = <b>6.5bb</b></td></tr>
-<tr><td>BTN 開 2.5bb，BB 3-bet 到 10bb，BTN 跟注</td><td>10 + 10 + 0.5 = <b>20.5bb</b></td></tr></table>
+<tr><td>BTN 開 2.5bb，BB 再加注到 10bb，BTN 跟注</td><td>10 + 10 + 0.5 = <b>20.5bb</b></td></tr></table>
 <h3>bb 怎麼換算成實際金額？</h3>
 <p>如果盲注是 10/20（大盲 20），那 1bb = 20，100bb = 2,000。換算很簡單：<b>實際金額 ÷ 大盲 = 幾 bb</b>。之後本課程所有數字都用 bb，你可以套用在任何盲注級別。</p>
   ${PIT('只看「這手要付多少錢」而不看底池與籌碼的比例；忘記盲注也算在底池裡。')}
@@ -2817,7 +2828,7 @@ COURSE[1]={t:'翻前基礎',goal:'懂位置、起手牌強弱、開池範圍與�
   <li><b>被支配</b>：K9o 對 KQo，雙方都有 K，但你的 9 比對手的 Q 小，贏的時候少、輸的時候多。所以「雜牌的高牌」（K9o、QTo）在前位常被棄掉。</li></ul>
   <h3>小對子怎麼看？</h3>
   <p>22–66 這類小對子很難靠對子直接贏，主要價值是<b>翻牌中三條</b>（約 12% 的機率，也就是約八次一次）。所以它們適合在後位、籌碼夠深時進池，指望翻中時能贏一大筆。</p>
-  <h3>阻擋牌（blocker）</h3><p>手上持有 A，就讓對手更少機會有 AA 或 AK。A5s 因此常被當作詐唬牌：有 A 的阻擋效果，還能成同花與輪子順子（第 3 課會再用到）。</p>
+  <h3>阻擋牌（blocker）</h3><p>手上持有 A，就讓對手更少機會有 AA 或 AK。A5s 因此常被當作詐唬牌（之後會學：用較弱的牌下注或加注，逼對手棄掉更好的牌）：有 A 的阻擋效果，還能成同花與輪子順子（後面學 3-bet 時會再用到）。</p>
   ${PIT('迷信「有 A 就是好牌」（A5o、A8o 常被 AK、AQ 支配）；為了同花而玩一堆雜牌；用 22–44 這類小對子打大底池。')}
   ${SUMM('169 類 = 對子 + 同花 + 不同花；牌力看高牌、對子、同花、連張；小心被支配；小對子靠翻中三條。')}`,
   quiz:[Q('AKs 有幾種組合？',['12','6','4','16'],2,'同花有 4 種花色，所以 AKs 是 4 種；AKo 才是 12 種。'),
@@ -2829,7 +2840,7 @@ COURSE[1]={t:'翻前基礎',goal:'懂位置、起手牌強弱、開池範圍與�
   body:()=>GOAL('知道第一個進池該怎麼加注、加多大，並理解「偷盲」為什麼賺錢。')+`
   <h3>第一個進池，請加注</h3>
   <p>如果前面的人都棄牌，你想玩這手牌，標準做法是<b>加注（開池）</b>，而不是只跟盲注（平跟、limp）。加注有三個好處：</p>
-  <ol><li>取得<b>主動權</b>，翻後可以持續下注。</li><li>有機會<b>讓盲注直接棄牌</b>，贏下底池。</li><li>把底池做大，牌好時能贏更多。</li></ol>
+  <ol><li>取得<b>主動權</b>，翻後可以先下注（在翻牌圈繼續下注，稱為「持續下注」，階段 3 會學）。</li><li>有機會<b>讓盲注直接棄牌</b>，贏下底池。</li><li>把底池做大，牌好時能贏更多。</li></ol>
   <p>平跟的壞處是：後面的人可以便宜進場，你也失去了「對手棄牌就直接贏」的機會，而且翻後常常沒有位置。</p>
   <h3>標準尺碼（100bb 深度）</h3>
   <table class="t"><tr><th>位置</th><th>常見開池尺碼</th></tr><tr><td>UTG ~ BTN</td><td>約 2.2–2.5bb</td></tr><tr><td>SB</td><td>約 3bb（沒位置，加大一點）</td></tr></table>
@@ -2838,9 +2849,9 @@ COURSE[1]={t:'翻前基礎',goal:'懂位置、起手牌強弱、開池範圍與�
   <div class="mut">這個計算忽略被跟注後的勝率，所以是保守估計。</div>
   /*EXTRA*/<h3>三種「前面有人行動」的情況</h3>
 <ul><li><b>前面都棄牌</b>：這就是「開池」，用本課的標準尺碼加注。</li>
-<li><b>前面有人加注</b>：這不是開池，而是「面對加注」，要用第 3 課的原則（跟注、3-bet 或棄牌）。</li>
+<li><b>前面有人加注</b>：這不是開池，而是「面對加注」，要用「面對加注」階段的原則（跟注、3-bet 或棄牌）。</li>
 <li><b>前面有人平跟</b>：加注要比標準尺碼再大一些（常見做法是約 3bb 再加上每位平跟者 1bb），因為多了「死錢」，也不想讓太多人便宜看牌。</li></ul>
-<h3>開池之後</h3><p>你加注後，常見的三種結果：所有人棄牌（直接贏盲注）、被一個人跟注（進入翻後，見第 4 級）、被 3-bet（見 3.4）。先想好這三條路，不要開完池才不知道怎麼辦。</p>
+<h3>開池之後</h3><p>你加注後，常見的三種結果：所有人棄牌（直接贏盲注）、被一個人跟注（進入翻後，見「翻後基礎」階段）、被 3-bet（見 4.4）。先想好這三條路，不要開完池才不知道怎麼辦。</p>
   ${PIT('用平跟進池；開池尺碼太大（嚇走該被你贏的人）或每次大小亂變；在前位用後位的範圍開池。')}
   ${SUMM('第一個進池就加注，約 2.2–2.5bb（SB 約 3bb）；偷盲只要對手棄牌約 62.5% 以上就不虧。')}`,
   quiz:[G_('rfi'),G_('rfi'),Q('BTN 加注到 2.5bb，想偷 1.5bb 的盲注。光靠棄牌，對手需棄牌多少才不虧？',['約 40%','約 50%','約 62.5%','約 80%'],2,'風險 2.5、獲利 1.5，打平的棄牌率 = 2.5 ÷ (2.5 + 1.5) = 62.5%。'),
@@ -2878,7 +2889,7 @@ COURSE[2]={t:'機率與賠率',goal:'會數 outs、用口訣估算、算出所�
   <h3>常見尺碼速查</h3><table class="t"><tr><th>對手下注</th><th>所需勝率</th></tr><tr><td>1/3 底池</td><td>20%</td></tr><tr><td>1/2 底池</td><td>25%</td></tr><tr><td>2/3 底池</td><td>28.6%</td></tr><tr><td>3/4 底池</td><td>30%</td></tr><tr><td>滿池</td><td>33%</td></tr><tr><td>2 倍底池</td><td>40%</td></tr></table>
   <h3>怎麼用？</h3>
   <p>比較你的勝率（或補中機率）和所需勝率：<b>高於它就能跟，低於它就該棄牌</b>（先不考慮隱含賠率）。</p>
-  ${EXAM('翻牌你有同花聽牌（9 outs），對手下注 1/2 底池。只看下一張：19.6% 小於所需的 25%，單純看賠率不夠，除非你預期補中後還能贏更多（隱含賠率，見 2.4）。')}
+  ${EXAM('翻牌你有同花聽牌（9 outs），對手下注 1/2 底池。只看下一張：19.6% 小於所需的 25%，單純看賠率不夠，除非你預期補中後還能贏更多（隱含賠率，見 3.3）。')}
   /*EXTRA*/<h3>三步驟套用</h3>
 <ol><li><b>還原比例</b>：對手下注占底池多少？（5 into 10 就是 1/2 底池）</li>
 <li><b>查速查表</b>：1/2 池需要 25%、2/3 池需要約 29%。</li>
@@ -3089,7 +3100,7 @@ ${EXAM(`你有 A♥6♥，翻牌 K♥ 9♥ 4♣：你有同花聽牌（9 outs）
   body:()=>GOAL('對照 10 個最常見的新手漏洞，找出自己的問題並知道怎麼練習。')+`
   <p>下面是新手最常見的錯誤。不用一次全改，每次挑 1–2 個專心練習。</p>
   <ol>${MISTAKES.map(m=>`<li><b>${m.title}</b>　<span class="mut">${m.fix}</span></li>`).join('')}</ol>
-  <p>完整說明請到「學習 → 規則與術語」查看，每一項都有「為什麼錯」與「怎麼改」。</p>
+  <p>完整說明請到「學習 → 速查手冊」查看，每一項都有「為什麼錯」與「怎麼改」。</p>
   ${SUMM('先從「少玩一點牌、不要平跟、算賠率」開始，這三件事就能避開多數新手損失。')}`,
   quiz:[Q('新手最常見也最傷的錯誤之一是？',['玩太多牌','玩太少牌','每次都全下','只玩 AA'],0,'玩太多牌（尤其在前位）會長期損失。'),
         Q('面對下注總是「好奇心跟注」的問題是？',['沒有問題','沒有算賠率，長期虧損','一定會贏','會被罰錢'],1,'沒有賠率依據的跟注是新手最大的漏洞之一。'),
@@ -3122,7 +3133,7 @@ const GLOSSARY=[
  ['持續下注','continuation bet / c-bet','翻前加注者在翻牌圈繼續下注。'],['價值下注','value bet','拿好牌下注，想讓更差的牌跟注。'],['薄價值','thin value','用中等牌力下小注，收取更差牌的價值。'],
  ['詐唬','bluff','用弱牌下注，想讓更好的牌棄牌。'],['半詐唬','semi-bluff','用還沒成牌但有補牌機會的聽牌下注或加注。'],['保護','protection','下注讓對手的聽牌付代價，避免被免費補牌。'],
  ['聽牌','draw','還差幾張就能成牌的狀態，例如同花聽牌。'],['outs','outs','補到之後能讓你變最大牌的剩餘牌張數。'],['同花聽牌','flush draw','差一張同花，有 9 張 outs。'],['兩頭順子聽牌','OESD','兩端任一張都能成順子，8 張 outs。'],['卡順','gutshot','只有中間一個點數能成順子，4 張 outs。'],
- ['踢腳','kicker','沒有用在牌型裡、用來決勝負的最大剩餘牌。'],['同花','suited','兩張底牌花色相同（如 AKs）。'],['不同花','offsuit','兩張底牌花色不同（如 AKo）。'],['口袋對子','pocket pair','兩張底牌點數相同。'],['連張','connectors','點數相連的兩張牌（如 87s）。'],
+ ['踢腳','kicker','沒有用在牌型裡、用來決勝負的最大剩餘牌。'],['同花牌','suited','兩張底牌花色相同（如 AKs）。'],['非同花牌','offsuit','兩張底牌花色不同（如 AKo）。'],['口袋對子','pocket pair','兩張底牌點數相同。'],['連張','connectors','點數相連的兩張牌（如 87s）。'],
  ['被支配','dominated','兩手牌有一張相同，但你另一張比較小（如 KJ 對 KQ）。'],['阻擋牌','blocker','你手上的牌讓對手更少機會擁有某些強牌。'],
  ['範圍','range','在某個情境下，你會用的所有可能手牌。'],['極化','polarized','範圍只有很強的牌和詐唬牌，中等牌少。'],['合併','merged','範圍裡包含連續強度的牌，中等牌也在內。'],
  ['底池','pot','桌上所有人投入的籌碼總和。'],['底池賠率','pot odds','跟注額與底池大小的比例，用來算所需勝率。'],['所需勝率','required equity','跟注至少需要的勝率才不虧。'],['隱含賠率','implied odds','補中後還能再贏到的額外籌碼。'],['最低防守頻率','MDF','面對下注時，至少要守住（不棄牌）的比例。'],
@@ -3131,7 +3142,32 @@ const GLOSSARY=[
  ['現金桌','cash game','籌碼等於現金、可隨時進出的牌桌。'],['錦標賽','tournament','買入後以籌碼比賽，依名次分獎金，盲注會遞增。'],['SNG','sit & go','湊滿人數就開打的單桌錦標賽。'],['ICM','Independent Chip Model','用籌碼比例估算獎金期望的模型。'],['泡沫期','bubble','再淘汰一人就能全部拿到獎金的階段。'],['單挑','heads-up / HU','只剩兩個人對戰。'],['多人底池','multiway','三人以上一起看翻牌的底池。'],
  ['GTO','game theory optimal','博弈論最佳策略，目標是讓對手無法剝削你。'],['剝削','exploit','針對對手的弱點調整打法來多贏錢。'],['混合策略','mixed strategy','同一手牌有時這樣打、有時那樣打。'],
  ['HUD','heads-up display','顯示對手統計數字的工具。'],['VPIP','voluntarily put money in pot','自願入池率。'],['PFR','preflop raise','翻前加注率。'],['AF','aggression factor','翻後攻擊係數。'],
- ['傾斜','tilt','因情緒影響而做出不理性的決策。'],['資金管理','bankroll management','控制用來打牌的資金，避免一次輸光。'],['變異','variance','短期結果的隨機波動。'],['買入','buy-in','參加牌桌或比賽所付的金額。'],['RTA','real-time assistance','即時輔助軟體，在真錢線上撲克中被禁止。']
+ ['傾斜','tilt','因情緒影響而做出不理性的決策。'],['資金管理','bankroll management','控制用來打牌的資金，避免一次輸光。'],['變異','variance','短期結果的隨機波動。'],['買入','buy-in','參加牌桌或比賽所付的金額。'],['RTA','real-time assistance','即時輔助軟體，在真錢線上撲克中被禁止。'],
+ ['翻後','postflop','翻牌發出之後的各輪下注（翻牌、轉牌、河牌）。'],
+ ['起手牌','starting hand','你拿到的兩張底牌。'],
+ ['點數','rank','牌的數字大小（2 到 A）。'],
+ ['組合數','combos','某類起手牌有幾種花色組合（對子 6、同花 4、不同花 12）。'],
+ ['邊池／主池','side pot / main pot','有人全下、其他人籌碼較多時，多出來的部分另成「邊池」；所有人都能爭的是「主池」。'],
+ ['不足額加注','short all-in','全下的金額不到最小加注。'],
+ ['最小加注','min-raise','加注的增量至少要等於前一次下注或加注的增量。'],
+ ['死錢','dead money','底池裡已不屬於任何人「權益」的錢，例如已棄牌者的盲注。'],
+ ['輪子','wheel','A-2-3-4-5，最小的順子。'],
+ ['主動權','initiative','翻前最後一個加注者，在翻後先下注、掌握節奏的優勢。'],
+ ['挖三條','set mining','用小對子進池，指望翻牌中三條贏大底池。'],
+ ['牌面','board texture','公共牌的組成與特性（乾燥、濕潤、配對、高牌或低連張）。'],
+ ['乾燥面／濕潤面','dry / wet board','乾燥面＝不連張、不同花，牌力不易改變；濕潤面＝連張、同花聽牌多，牌力容易翻轉。'],
+ ['範圍優勢','range advantage','整體來看，某一方的範圍在這個牌面上有較多強牌。'],
+ ['成牌','made hand','已經形成對子以上牌型的牌。'],
+ ['空氣','air','沒有成牌、也沒有聽牌的牌。'],
+ ['底池控制','pot control','用過牌或小注避免讓底池變得太大。'],
+ ['實現率','equity realization','理論勝率實際能「兌現」多少；有位置、籌碼深的牌實現率高。'],
+ ['反隱含賠率','reverse implied odds','補中後仍可能輸給更大的牌，因此多輸錢的情況。'],
+ ['超池','overbet','下注金額超過底池大小。'],
+ ['BB 防守','defending the big blind','你在大盲，面對開池時選擇跟注或 3-bet，而不是棄牌。'],
+ ['5-bet','5-bet','對 4-bet 再加注，通常是全下。'],
+ ['推或棄牌','push / fold','短碼時只剩「全下」或「棄牌」兩個選擇。'],
+ ['M 值','M-ratio','籌碼 ÷（小盲 + 大盲 + 前注），代表還能撐幾輪盲注。'],
+ ['氣泡因子','bubble factor','輸掉的獎金損失 ÷ 贏得的獎金收益；大於 1 表示輸的代價較大。']
 ];
 /* ---- 示範牌局 ---- */
 function eqNow(handStr,boardStr,combos,it){const r=equity(parseCards(handStr),boardStr?parseCards(boardStr):[],combos,it||2500);return r?r.eq:null}
@@ -3139,7 +3175,7 @@ const pcs=x=>x==null?'—':(x*100).toFixed(0)+'%';
 function demoVerdict(eq,need){if(eq==null)return '—';return eq>=need+0.10?'明顯高於所需 → <b>跟注</b>':eq>=need-0.03?'接近門檻，屬於邊緣（要看對手傾向、位置與隱含賠率）':'低於所需 → 傾向<b>棄牌</b>'}
 const BBdef=()=>expand(wmaps(FACE['BB 面對 BTN 開池']).mC),BTNopen=()=>expand(RM.BTN),BBvsCO=()=>expand(wmaps(FACE['BB 面對 CO 開池']).mC);
 const DEMOS=[
- {id:'d1',t:'示範 1：BTN 偷盲',lv:'第 1 級',sum:'後位用 A9s 開池，贏下盲注，順便看偷盲的數學。',hero:'As9s',steps:[
+ {id:'d1',t:'示範 1：BTN 偷盲',lv:'階段 2',sum:'後位用 A9s 開池，贏下盲注，順便看偷盲的數學。',hero:'As9s',steps:[
   {h:'情境',board:'',html:()=>`6 人桌、每人 100bb。UTG、HJ、CO 都棄牌，輪到你（<b>BTN</b>），手牌 ${cardsHTML(parseCards('As9s'))}。後面只剩 SB 和 BB。`},
   {h:'看位置',board:'',html:()=>`你在最有利的按鈕位，後面只有兩個人，而且翻後你最後行動。這是可以放寬範圍的位置。`},
   {h:'看範圍',board:'',html:()=>`A9s（同花 A）在 BTN 的開池範圍內（本練習器 BTN 約開 ${pctOf(RM.BTN).toFixed(0)}% 的牌）。同樣的牌在 UTG 就是邊緣牌。`},
@@ -3148,14 +3184,14 @@ const DEMOS=[
   {h:'結果 B：BB 跟注',board:'',html:()=>`BB 跟注，底池變成 5.5bb。你有位置，翻後最後行動。你仍然有機會用持續下注贏下底池（見示範 3）。`},
   {h:'偷盲的數學',board:'',html:()=>`你冒 2.5bb 的風險贏 1.5bb。只要對手棄牌率超過 2.5 ÷ (2.5 + 1.5) = <b>62.5%</b>，光靠偷盲就不虧；被跟注時你還有位置與牌力補貼。`}],
   take:['後位範圍可以放寬，並且用加注（不是平跟）進池。','開池約 2.2–2.5bb；偷盲需要對手棄牌率約 62.5% 以上。'],prac:[['翻前範圍練習','t-pre']]},
- {id:'d2',t:'示範 2：BB 防守與賠率',lv:'第 2–3 級',sum:'用 98s 在大盲防守，翻牌跟注聽牌，轉牌因賠率不夠而棄牌。',hero:'9h8h',steps:[
+ {id:'d2',t:'示範 2：BB 防守與賠率',lv:'階段 4',sum:'用 98s 在大盲防守，翻牌跟注聽牌，轉牌因賠率不夠而棄牌。',hero:'9h8h',steps:[
   {h:'情境',board:'',html:()=>`BTN 開池到 2.5bb，SB 棄牌。你在 <b>BB</b>，手牌 ${cardsHTML(parseCards('9h8h'))}。底池 = 2.5 + 1 + 0.5 = 4bb，你再付 1.5bb。`},
   {h:'算所需勝率',board:'',html:()=>`所需勝率 = 1.5 ÷ (4 + 1.5) ≈ <b>27%</b>。98s 對 BTN 的開池範圍，勝率約 <b>${pcs(eqNow('9h8h','',BTNopen(),3000))}</b>，超過 27%，而且同花連張翻後好玩，所以<b>跟注</b>。底池變成 5.5bb。`},
   {h:'翻牌',board:'7s6d2c',html:()=>`翻牌 7♠ 6♦ 2♣。你有<b>兩頭順子聽牌</b>（拿 10 或 5 就成順子，共 8 張 outs）。BTN 持續下注 <b>2bb</b>（約 1/3 底池）。<br>所需勝率 = 2 ÷ (5.5 + 2 + 2) ≈ <b>21%</b>。只看下一張，補中機率約 17.4%；若再加上你可能贏到的額外籌碼（隱含賠率）以及聽牌之外的勝率（對 BTN 範圍你整體勝率約 <b>${pcs(eqNow('9h8h','7s6d2c',BTNopen(),3000))}</b>），<b>跟注</b>合理。底池變成 9.5bb。`},
   {h:'轉牌',board:'7s6d2cKc',html:()=>`轉牌 K♣，你沒有補中。BTN 再下注 <b>5bb</b>（約 1/2 底池）。<br>所需勝率 = 5 ÷ (9.5 + 5 + 5) ≈ <b>26%</b>。你只剩一張牌的機會：8 outs ÷ 46 ≈ <b>17%</b>，低於所需勝率，單看賠率<b>不夠</b>，傾向<b>棄牌</b>（除非你判斷隱含賠率很大）。`},
   {h:'重點',board:'7s6d2cKc',html:()=>`同一個聽牌，翻牌因為對手下注小而可以跟，轉牌因為下注變大、只剩一張牌而不夠賠率。這就是「算所需勝率」的用途：<b>不是看到聽牌就一直追</b>。`}],
   take:['BB 價格便宜，可以防守較寬。','面對下注先算所需勝率，再和補中機率比較。'],prac:[['底池賠率練習','t-pot'],['勝率預測練習','t-eq']]},
- {id:'d3',t:'示範 3：乾燥面持續下注',lv:'第 4 級',sum:'CO 用 KQo 開池，在 K 高乾燥面小注持續下注。',hero:'KsQd',steps:[
+ {id:'d3',t:'示範 3：乾燥面持續下注',lv:'階段 3',sum:'CO 用 KQo 開池，在 K 高乾燥面小注持續下注。',hero:'KsQd',steps:[
   {h:'情境',board:'',html:()=>`你在 <b>CO</b> 拿 ${cardsHTML(parseCards('KsQd'))} 開池 2.5bb，BB 跟注。底池 5.5bb，有效籌碼約 97.5bb。`},
   {h:'翻牌',board:'Kh7c2d',html:()=>`翻牌 K♥ 7♣ 2♦：<b>乾燥面</b>（不連張、不同花），而且你是翻前加注者，K 高的牌面對你有範圍優勢。BB 過牌給你。你有頂對（K）+ Q 踢腳，對 BB 的防守範圍勝率約 <b>${pcs(eqNow('KsQd','Kh7c2d',BBvsCO(),3000))}</b>。`},
   {h:'決定',board:'Kh7c2d',html:()=>`<b>下注約 2bb（約 1/3 底池）</b>：乾燥面用小注就夠了，能收到更差的 K、中對子與一些聽牌的錢，也讓空氣牌棄牌。`},
@@ -3163,7 +3199,7 @@ const DEMOS=[
   {h:'結果 B：BB 跟注',board:'Kh7c2d4s',html:()=>`BB 跟注，底池 9.5bb。轉牌 4♠ 沒有改變局面，BB 過牌。你的頂對仍然領先，可以再<b>價值下注約 1/2 底池（約 5bb）</b>；除非 BB 做出強烈的加注，否則保持控制底池即可。`},
   {h:'重點',board:'Kh7c2d4s',html:()=>`先看牌面（乾燥）、再看誰有範圍優勢（你）、最後決定尺碼（小注）。下注是為了讓更差的牌付錢（價值）與讓空氣牌棄牌。`}],
   take:['乾燥面：小尺碼、高頻率持續下注。','下注前先想清楚目的：價值、詐唬或保護。'],prac:[['模擬比賽（從翻牌開始）','t-sim']]},
- {id:'d4',t:'示範 4：同一手牌，不同尺度',lv:'第 4 級 + 進階',sum:'同樣的 7♣6♣（中對），面對 1/3、3/4 與 1.5 倍底池的下注，安全邊際一路縮小。',hero:'7c6c',steps:[
+ {id:'d4',t:'示範 4：同一手牌，不同尺度',lv:'階段 3–4 + 進階',sum:'同樣的 7♣6♣（中對），面對 1/3、3/4 與 1.5 倍底池的下注，安全邊際一路縮小。',hero:'7c6c',steps:[
   {h:'情境',board:'',html:()=>`BTN 開池，你在 <b>BB</b> 拿 ${cardsHTML(parseCards('7c6c'))} 跟注，底池 5.5bb。`},
   {h:'翻牌',board:'Qs7d2c',html:()=>`翻牌 Q♠ 7♦ 2♣：你只有<b>中對（7）</b>，踢腳 6，不算強；對手有很多 Q 和更大的牌。BTN 準備對你下注，我們看看三種尺度。`},
   {h:'小注（約 1/3 底池）',board:'Qs7d2c',html:()=>{
@@ -3177,7 +3213,7 @@ const DEMOS=[
     return `BTN 下注 8bb（約 1.5 倍底池）。範圍<b>高度極化</b>：很強的牌加少量詐唬。你的勝率約 <b>${pcs(eq)}</b>，所需勝率 ≈ <b>${pcs(need)}</b>：${demoVerdict(eq,need)}`}},
   {h:'重點',board:'Qs7d2c',html:()=>`同一手牌，對手下注越大，他的範圍越窄越強，你的勝率越低，而你需要的勝率越高，兩者之間的「安全邊際」越來越小。<b>中等牌（只能抓詐唬的牌）面對大注要更謹慎；面對小注可以更寬。</b><br><span class="mut">註：這裡的「縮窄範圍」是簡化模型（保留該範圍中牌力最強的一部分，再加少量弱牌當詐唬），實際對手的範圍依牌面與個人傾向而不同。</span>`}],
   take:['下注尺度是推測對手範圍的重要線索。','小注範圍寬可以多跟；大注範圍偏強，中等牌要更小心。'],prac:[['情境練習：尺度解讀','t-scn']]},
- {id:'d5',t:'示範 5：三條街的價值下注',lv:'第 4 級',sum:'用頂對頂踢腳連續價值下注，並在每條街調整尺碼。',hero:'AsKh',steps:[
+ {id:'d5',t:'示範 5：三條街的價值下注',lv:'階段 3',sum:'用頂對頂踢腳連續價值下注，並在每條街調整尺碼。',hero:'AsKh',steps:[
   {h:'情境',board:'',html:()=>`你在 <b>BTN</b> 拿 ${cardsHTML(parseCards('AsKh'))} 開池，BB 跟注，底池 5.5bb。`},
   {h:'翻牌',board:'Ad8c3s',html:()=>`翻牌 A♦ 8♣ 3♠：乾燥面，你有<b>頂對頂踢腳</b>，對 BB 的防守範圍勝率約 <b>${pcs(eqNow('AsKh','Ad8c3s',BBdef(),3000))}</b>。BB 過牌，你下注 2bb（約 1/3 底池），BB 跟注，底池 9.5bb。`},
   {h:'轉牌',board:'Ad8c3s6h',html:()=>`轉牌 6♥，沒有太大變化。BB 再過牌，你下注約 5bb（約 1/2 底池），BB 跟注，底池 19.5bb。<br>你想讓這些牌付錢：A 帶小踢腳、中對子（88、77）、一些聽牌。`},
@@ -3252,7 +3288,7 @@ function courseHome(){
   ${task(D.pre>=10,`翻前範圍練習 10 題（今天 ${D.pre}/10）`,`<button class="b s" onclick="show('t-pre')">前往</button>`)}
   ${task(D.pot>=5,`底池賠率練習 5 題（今天 ${D.pot}/5）`,`<button class="b s" onclick="show('t-pot')">前往</button>`)}
   ${task(D.hands>=3,`模擬對戰 3 手（今天 ${D.hands}/3）`,`<button class="b s" onclick="show('t-sim')">前往</button>`)}
-  <div class="mut" style="margin-top:6px">每天花 15–20 分鐘，比一次練很久更有效。遇到不懂的詞，查「學習 → 規則與術語」。</div></div>
+  <div class="mut" style="margin-top:6px">每天花 15–20 分鐘，比一次練很久更有效。遇到不懂的詞，查「學習 → 速查手冊」。</div></div>
   ${COURSE.slice(0,BEG_LV).map((L,l)=>levelCard(l,STAGE_NAME[l])).join('')}
   <div class="panel"><h2>下一步</h2><div class="mut">完成新手路徑後，可以到「進階」學習 GTO 概念、錦標賽與 ICM、籌碼深度與下注尺度等主題。</div>
   <button class="b s" onclick="show('t-adv')">前往進階課程</button><button class="b s" onclick="show('t-guide')">規則與術語</button>
@@ -3290,6 +3326,258 @@ function lessonView(){
   <button class="b" id="qsub" onclick="submitQuiz()">送出答案</button><button class="b s" onclick="retryQuiz()">重新出題</button><div id="qres" aria-live="polite"></div></div>
   <div class="panel">${prev?`<button class="b s" onclick="openLesson(${prev[0]},${prev[1]})">← 上一課</button>`:''}${next?`<button class="b" onclick="openLesson(${next[0]},${next[1]})">下一課 →</button>`:''}</div>`;
 }
+
+/* ============ 學習梯度重排、名詞標註、使用時機、決策卡 ============ */
+/* ---- 1. 重排新手路徑：看懂牌局 → 翻前 → 翻後基礎 → 機率與賠率 → 面對加注與總整理 ---- */
+(function reorg(){
+  const byId={};COURSE.slice(0,5).forEach(L=>L.lessons.forEach(x=>{byId[x.id]=x}));
+  const spec=[
+    {t:'看懂牌局',goal:'看懂牌局流程、牌型、下注規則與基本術語',ids:['0.1','0.2','0.3','0.4']},
+    {t:'翻前：該玩哪些牌',goal:'懂位置、起手牌強弱、開池範圍與尺碼',ids:['1.1','1.2','1.3']},
+    {t:'翻後基礎：怎麼下注',goal:'學會判讀牌面、持續下注與價值下注',ids:['4.1','4.2','4.3']},
+    {t:'機率與賠率：該不該跟',goal:'會數 outs、算所需勝率，並理解隱含賠率與半詐唬',ids:['2.1','2.2','2.4','4.4']},
+    {t:'面對加注與總整理',goal:'會 3-bet、跟注、BB 防守與被 3-bet 時的處理，並避開常見錯誤',ids:['3.1','3.2','3.3','3.4','4.5']}
+  ];
+  const map={};
+  spec.forEach((s,l)=>s.ids.forEach((id,i)=>{map[id]=l+'.'+(i+1)}));
+  const mdf=byId['2.3'];
+  // 第 5 級（GTO 概念）插入「最低防守頻率與詐唬比例」成為第 2 課，其餘順延
+  const oldL5=COURSE[5].lessons.map(x=>x.id);
+  oldL5.forEach((id,i)=>{map[id]='5.'+(i+(i>=1?2:1))});
+  map['2.3']='5.2';
+  spec.forEach((s,l)=>{COURSE[l]={t:s.t,goal:s.goal,lessons:s.ids.map(id=>byId[id])}});
+  COURSE[5].lessons.splice(1,0,mdf);
+  COURSE.slice(0,6).forEach((L,l)=>L.lessons.forEach((x,i)=>{x.id=l+'.'+(i+1)}));
+  // 舊進度遷移（只做一次）
+  try{
+    if(CS.mig!==3){
+      const nd={};Object.keys(CS.done||{}).forEach(k=>{if(CS.done[k])nd[map[k]||k]=true});
+      CS.done=nd;CS.mig=3;saveCS();
+    }
+  }catch(e){}
+})();
+// 各階段的練習目標對應（舊的 2、3、4 級 → 新的 3、4、2 階段）
+(function(){
+  const _pl=pracList;
+  pracList=function(l){const m={2:4,3:2,4:3};return _pl(m[l]!==undefined?m[l]:l)};
+})();
+
+/* ---- 2. 名詞：文中點一下看定義 + 每課「本課新名詞」 ---- */
+const TERM_LIST=[];
+GLOSSARY.forEach(g=>{
+  const key=g[0],al=new Set(key.split('／').map(s=>s.trim()).filter(Boolean));
+  String(g[1]).split(/[\/\s]+/).forEach(t=>{if(/^[A-Za-z0-9\-\+&]+$/.test(t)&&t.length>=2&&((t===t.toUpperCase()&&/[A-Z]/.test(t))||t.includes('-')||t==='outs'))al.add(t)});
+  (({'期望值':['EV'],'勝率':['equity']})[key]||[]).forEach(a=>al.add(a));
+  al.forEach(a=>TERM_LIST.push({a,key,en:g[1],d:g[2]}));
+});
+const TERM_BY_A=new Map(TERM_LIST.map(t=>[t.a,t])),TERM_BY_KEY=new Map(GLOSSARY.map(g=>[g[0],{key:g[0],en:g[1],d:g[2]}]));
+const TERM_RE=new RegExp(TERM_LIST.slice().sort((x,y)=>y.a.length-x.a.length).map(t=>t.a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');
+const isAsc=s=>/^[A-Za-z0-9]/.test(s),isAlnum=c=>!!c&&/[A-Za-z0-9\-]/.test(c);
+function findTerms(txt){
+  const out=[];TERM_RE.lastIndex=0;let m;
+  while((m=TERM_RE.exec(txt))){
+    const t=TERM_BY_A.get(m[0]);if(!t)continue;
+    if(isAsc(m[0])&&(isAlnum(txt[m.index-1])||isAlnum(txt[m.index+m[0].length])))continue;
+    out.push({t,i:m.index,len:m[0].length});
+  }
+  return out;
+}
+function annotateTerms(root){
+  if(!root)return;
+  const seen=new Set(),nodes=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  while(w.nextNode())nodes.push(w.currentNode);
+  const skip=el=>el.closest('.opt,.ql,code,.term,a,button,input,textarea,select,.tag,h2,.why,#termpop,.newterms');
+  for(const tn of nodes){
+    const p=tn.parentElement;if(!p||skip(p))continue;
+    const txt=tn.nodeValue,hits=findTerms(txt).filter(h=>{if(seen.has(h.t.key))return false;seen.add(h.t.key);return true});
+    if(!hits.length)continue;
+    const frag=document.createDocumentFragment();let last=0;
+    hits.forEach(h=>{
+      frag.appendChild(document.createTextNode(txt.slice(last,h.i)));
+      const sp=document.createElement('span');sp.className='term';sp.tabIndex=0;sp.setAttribute('role','button');sp.dataset.k=h.t.key;
+      sp.setAttribute('aria-label','名詞解釋：'+h.t.key);sp.textContent=txt.substr(h.i,h.len);frag.appendChild(sp);last=h.i+h.len;
+    });
+    frag.appendChild(document.createTextNode(txt.slice(last)));tn.parentNode.replaceChild(frag,tn);
+  }
+}
+(function termPopup(){
+  const pop=document.createElement('div');pop.id='termpop';pop.setAttribute('role','tooltip');pop.style.display='none';document.body.appendChild(pop);
+  function hide(){pop.style.display='none'}
+  function show1(el){
+    const t=TERM_BY_KEY.get(el.dataset.k);if(!t)return;
+    pop.innerHTML='<b>'+t.key+'</b> <span class="mut">'+t.en+'</span><div>'+t.d+'</div><a href="#" onclick="hideTerm();show(\'t-guide\');return false">到速查手冊查看全部術語</a>';
+    pop.style.display='block';
+    const r=el.getBoundingClientRect(),w=Math.min(300,innerWidth-24);pop.style.width=w+'px';
+    let left=Math.max(12,Math.min(innerWidth-w-12,r.left)),top=r.bottom+6;
+    if(top+pop.offsetHeight>innerHeight-8)top=Math.max(8,r.top-pop.offsetHeight-6);
+    pop.style.left=left+'px';pop.style.top=top+'px';
+  }
+  window.hideTerm=hide;
+  document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('.term');if(a){e.preventDefault();show1(a)}else if(!(e.target.closest&&e.target.closest('#termpop')))hide()});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape')hide();
+    if((e.key==='Enter'||e.key===' ')&&document.activeElement&&document.activeElement.classList.contains('term')){e.preventDefault();show1(document.activeElement)}
+  });
+  window.addEventListener('scroll',hide,{passive:true});
+})();
+let NEWT=null;
+function computeNewTerms(){
+  NEWT={};const seen=new Set();
+  COURSE.forEach(L=>L.lessons.forEach(x=>{
+    const tmp=document.createElement('div');tmp.innerHTML=typeof x.body==='function'?x.body():x.body;
+    const hits=findTerms(tmp.textContent),order=[];
+    hits.forEach(h=>{if(!order.includes(h.t.key))order.push(h.t.key)});
+    NEWT[x.id]=order.filter(k=>!seen.has(k));order.forEach(k=>seen.add(k));
+  }));
+}
+function newTermsBox(id){
+  if(!NEWT)computeNewTerms();
+  const keys=(NEWT[id]||[]);if(!keys.length)return '';
+  const shown=keys.slice(0,12);
+  return '<div class="newterms"><b>📖 本課會出現的新名詞</b>'+shown.map(k=>{const t=TERM_BY_KEY.get(k);return '<div><b>'+t.key+'</b>'+(/[一-鿿]/.test(t.en)?'':' <span class="mut">'+t.en+'</span>')+'：'+t.d+'</div>'}).join('')+
+    (keys.length>shown.length?'<div class="mut">…還有 '+(keys.length-shown.length)+' 個，文中點虛線字詞或查速查手冊。</div>':'<div class="mut">文中的虛線字詞也可以點一下查看定義。</div>')+'</div>';
+}
+
+/* ---- 3. 每課「什麼時候用」 ---- */
+const W=(when,how,mis)=>`<div class="when">🕒 <b>什麼時候用</b><ul><li><b>時機：</b>${when}</li><li><b>怎麼用：</b>${how}</li><li><b>常見誤用：</b>${mis}</li></ul></div>`;
+const WHEN={
+ '0.1':W('每一手牌、每次輪到你行動之前。','先確認三件事：現在是哪一輪（翻前、翻牌、轉牌、河牌）？我在哪個位置？後面還有幾個人沒行動？','只看自己的牌，不管位置與順序。'),
+ '0.2':W('翻牌、轉牌、河牌每發一張牌後，以及攤牌前。','重新數一次：我現在是什麼牌型？公共牌上有沒有同花或順子的可能？對手可能有比我更大的嗎？','只看自己的牌，忽略公共牌上的同花、順子威脅。'),
+ '0.3':W('要下注、跟注或比較金額之前。','先把金額換成 bb，再算「底池現在多大」，不要只看實際金額。','用「這筆錢很大」的感覺判斷，卻沒看它占底池與籌碼的比例。'),
+ '0.4':W('想加注（要算最小加注）、有人全下（想到邊池）、河牌結束要攤牌時。','遇到不確定的規則，回來翻這一課或速查手冊。','在真錢對局進行中用本工具即時查詢（本工具只供學習）。'),
+ '1.1':W('翻前，前面的人都棄牌（還沒人加注），輪到你決定要不要進池。','先看位置 → 對照範圍表（UTG 最緊、BTN 最寬）→ 在範圍內才玩。','前面已經有人加注時還用這套（那是階段 5「面對加注」的情境）。'),
+ '1.2':W('看到底牌的那一刻。','先歸類（對子、同花、連張、大牌），再問「我會不會被別人更好的同類牌支配？」','只靠分類決定玩不玩，卻忘了還要看位置（1.1）。'),
+ '1.3':W('你決定要玩這手牌、而且前面沒有人加注時。','加注到約 2.2–2.5bb（SB 約 3bb）；在 CO、BTN、SB 常用來偷盲。前面有人平跟，尺碼加大。','前面有人加注時還用開池尺碼；用平跟進池。'),
+ '2.1':W('翻牌一發出來（尤其你是翻前加注者）。','先判斷牌面是乾燥還是濕潤、A／K 高還是低連張，再問「誰的範圍比較占優勢」。','每個牌面都用同一種打法。'),
+ '2.2':W('你是翻前加注者，翻牌圈輪到你先下注（或對手過牌給你）。','先問「下注是為了價值、詐唬還是保護？」；乾燥面常用約 1/3 底池。','多人底池、濕潤牌面而你是空氣、或對手很愛跟注時仍每次都下注。'),
+ '2.3':W('你有成牌（對子以上），輪到你決定要不要下注、下多大；或河牌要不要收錢時。','問「有更差的牌會跟注嗎？」有才下注；尺碼選「更差的牌仍願意跟」的最大值。','沒有更差的牌會跟時還硬下注；有價值卻因為怕被加注而過牌。'),
+ '3.1':W('你有聽牌（差一張就成同花或順子）時。','數 outs → 翻牌 ×4、轉牌 ×2；面對下注時只看下一張（×2）。','沒有聽牌卻在算；忘了補中後仍可能輸給更大的牌。'),
+ '3.2':W('對手下注，你要決定「跟不跟」時（任何一街）。','還原下注比例 → 查速查表 → 與你的勝率或補中機率比較。','輪到自己要下注、加注時還用它（那時用 2.2、2.3）。'),
+ '3.3':W('賠率算下來「差一點點」時，用來判斷能不能多跟。','問三件事：補中後還能多贏多少？籌碼夠深嗎？對手會付錢嗎？','拿它合理化所有的聽牌跟注；籌碼淺或沒位置時沒有打折。'),
+ '3.4':W('你有強聽牌（同花加順子，或約 12 outs 以上），對手過牌或下注時。','先看對手會不會棄牌、你有沒有位置，再決定半詐唬下注／加注，或只跟注。','用很弱的聽牌（卡順）去詐唬愛跟注的對手。'),
+ '4.1':W('前面有人開池、輪到你，而你有強牌（價值）或有阻擋牌的詐唬牌（如 A5s）。','有位置約 3 倍、沒位置約 4 倍；先想好被 4-bet 怎麼辦。','用「看起來不錯」卻會被支配的牌（KJo、A9o）3-bet。'),
+ '4.2':W('面對開池，你要在棄牌、跟注、3-bet 之間選。','強牌 3-bet、中等牌跟注、弱牌棄牌；沒位置時傾向「3-bet 或棄牌」。','沒位置時用邊緣牌跟注。'),
+ '4.3':W('你在大盲，有人開池，其他人棄牌（或只剩他）時。','算所需勝率（約 27%）→ 對 BTN 可防守較寬、對 UTG 要收緊。','因為「已經投了 1bb」就跟注。'),
+ '4.4':W('你開池後，後面有人 3-bet。','強牌 4-bet、中強牌跟注（有位置更好）、其餘棄牌；事前就決定好。','不甘心而一直跟注。'),
+ '4.5':W('每打完一場牌（或每週一次）。','對照 10 項挑 1–2 項，用手牌歷史複盤。','一次想全部改掉。')
+};
+
+/* ---- 4. 階段與今日任務 ---- */
+const STAGE_META=[
+ {name:'階段 1　看懂牌局',can:'說得出一手牌怎麼進行、看懂牌型與位置、會算底池，並知道基本下注規則。',plan:[['看示範牌局 1','t-demo'],['對戰 2 手（開「策略提示」，只觀察流程）','t-sim']]},
+ {name:'階段 2　翻前：該玩哪些牌',can:'知道在什麼位置該玩哪些起手牌，並會用正確尺碼開池。',plan:[['翻前範圍練習（累積 30 題、正確率 85%）','t-pre'],['看示範 1：BTN 偷盲','t-demo'],['對戰 5 手（策略提示，只專心做翻前決定）','t-sim']]},
+ {name:'階段 3　翻後基礎：怎麼下注',can:'能判讀牌面，知道何時持續下注、何時過牌，並做簡單的價值下注。',plan:[['看示範 3、5','t-demo'],['對戰「從翻牌開始」10 手（策略提示）','t-sim']]},
+ {name:'階段 4　機率與賠率：該不該跟',can:'能數 outs、算所需勝率，並決定聽牌要不要跟、要不要半詐唬。',plan:[['勝率預測（平均誤差 < 5 個百分點）','t-eq'],['底池賠率（20 題、正確率 80%）','t-pot'],['看示範 2','t-demo']]},
+ {name:'階段 5　面對加注與總整理',can:'知道面對開池時怎麼選、BB 怎麼防守、被 3-bet 怎麼辦，並對照常見錯誤自我檢查。',plan:[['面對加注練習（50 題、正確率 80%）','t-learn'],['對戰 20 手後改開「無提示」測試','t-sim'],['手牌歷史：複盤','t-hist']]}
+];
+const STAGE_TASKS=[
+ [['lessons',1,'完成 1 個小測驗'],['hands',2,'模擬對戰 2 手（策略提示）']],
+ [['lessons',1,'完成 1 個小測驗'],['pre',10,'翻前範圍練習 10 題'],['hands',3,'模擬對戰 3 手']],
+ [['lessons',1,'完成 1 個小測驗'],['hands',3,'模擬對戰 3 手（可選「從翻牌開始」）']],
+ [['lessons',1,'完成 1 個小測驗'],['pot',5,'底池賠率練習 5 題'],['eq',3,'勝率預測 3 題']],
+ [['lessons',1,'完成 1 個小測驗'],['face',5,'面對加注練習 5 題'],['hands',3,'模擬對戰 3 手']]
+];
+const _eqSubmit=eqSubmit;eqSubmit=function(){const was=eqs&&eqs.done;_eqSubmit();if(eqs&&eqs.done&&!was)bump('eq')};
+const _faceAnswer=faceAnswer;faceAnswer=function(a){const was=face.answered;_faceAnswer(a);if(face.answered&&!was)bump('face')};
+const OPEN_BY=id=>{for(let l=0;l<COURSE.length;l++){const i=COURSE[l].lessons.findIndex(x=>x.id===id);if(i>=0)return openLesson(l,i)}};
+function stageCard(l){
+  const L=COURSE[l],dn=L.lessons.filter(x=>CS.done[x.id]).length,pr=pracList(l),M=STAGE_META[l];
+  return `<div class="panel"><div class="topbar"><h2 style="margin:0">${M.name}</h2><span class="tag">${dn}/${L.lessons.length}</span></div>
+  <div class="mut"><b>學完你能：</b>${M.can}</div><div class="bar" style="margin:8px 0"><i style="width:${dn/L.lessons.length*100}%"></i></div>
+  ${L.lessons.map((x,i)=>`<div class="lrow" onclick="openLesson(${l},${i})" role="button" tabindex="0" onkeydown="if(event.key==='Enter')openLesson(${l},${i})"><span>${CS.done[x.id]?'✅':'○'}</span><span>${x.id}　${x.t}</span></div>`).join('')}
+  <div class="mut" style="margin-top:8px"><b>讀完課之後，依序做：</b></div>${M.plan.map(([t,tab],i)=>`<div class="lrow" style="cursor:default"><span>${i+1}.</span><span style="flex:1">${t}</span><button class="b s" onclick="show('${tab}')">前往</button></div>`).join('')}
+  ${pr.length?`<div class="mut" style="margin-top:8px"><b>畢業條件</b>${pr.map(p=>`<div>${p.ok===null?'◇':p.ok?'✔':'○'} ${p.t}</div>`).join('')}</div>`:''}</div>`;
+}
+function courseHome(){
+  const all=begLessons(),done=all.filter(([l,i])=>CS.done[COURSE[l].lessons[i].id]).length,nx=nextBeg(),D=dailyGet(),cur=nx?nx[0]:4;
+  const tasks=STAGE_TASKS[cur].map(([k,n,t])=>{const v=D[k]||0,ok=v>=n;return `<div class="lrow" style="cursor:default"><span>${ok?'✅':'○'}</span><span style="flex:1">${t}（今天 ${v}/${n}）</span></div>`}).join('');
+  $('t-course').innerHTML=`<div class="panel"><h2>新手路徑</h2>
+  <div class="mut">從「看不懂牌」到「能獨立做翻前與賠率決策」，共 ${STAGE_META.length} 個階段、${all.length} 課。<b>建議做法：一階段一階段來，每階段都是「讀課 → 做練習 → 看示範 → 打幾手對戰」。</b>內容為教學用途，不保證獲利，也不涉及真錢。</div>
+  <div class="bar" style="margin:10px 0"><i style="width:${done/all.length*100}%"></i></div><div>路徑進度：<b>${done}/${all.length}</b> 課</div>
+  ${nx?`<button class="b big" style="margin-top:8px" onclick="openLesson(${nx[0]},${nx[1]})">${done?'繼續學習：':'開始學習：'}${COURSE[nx[0]].lessons[nx[1]].id} ${COURSE[nx[0]].lessons[nx[1]].t}</button>`:'<div class="res ok"><b>🎉 完成新手路徑！</b> 可以到「進階」繼續，或用「模擬比賽」與「手牌歷史」持續練習。</div>'}</div>
+  <div class="panel"><h2>今日任務（${STAGE_META[cur].name.replace('　',' ')}）</h2>${tasks}
+  <div class="mut" style="margin-top:6px">任務會隨你的學習階段改變。每天 15–20 分鐘，比一次練很久更有效。遇到不懂的詞，點課文裡的虛線字詞，或查「學習 → 速查手冊」。</div></div>
+  ${COURSE.slice(0,5).map((L,l)=>stageCard(l)).join('')}
+  <div class="panel"><h2>下一步</h2><div class="mut">完成新手路徑後，到「進階」學習 GTO 概念、錦標賽與 ICM、籌碼深度與下注尺度等主題。</div>
+  <button class="b s" onclick="show('t-adv')">前往進階課程</button><button class="b s" onclick="show('t-guide')">速查手冊</button>
+  <button class="b s" onclick="if(confirm('確定清除課程進度？')){CS.done={};saveCS();courseHome()}">清除課程進度</button></div>`;
+}
+function lessonView(){
+  const L=COURSE[CV.lv],les=L.lessons[CV.ls],all=flatLessons(),idx=all.findIndex(([l,i])=>l===CV.lv&&i===CV.ls),prev=all[idx-1],next=all[idx+1];
+  let body=typeof les.body==='function'?les.body():les.body;const adv=CV.lv>=BEG_LV;
+  if(WHEN[les.id])body=body.replace(/(<div class="goal">[\s\S]*?<\/div>)/,m=>m+WHEN[les.id]);
+  lessonHost().innerHTML=`<div class="panel lesson"><div class="mut"><a href="#" onclick="closeLesson();return false">← ${adv?'進階課程':'新手路徑'}</a> ／ ${adv?'第 '+CV.lv+' 級 ':'階段 '+(CV.lv+1)+'　'}${L.t}</div>
+  <h2 style="font-size:20px;margin-top:6px">${les.id}　${les.t} ${CS.done[les.id]?'<span class="tag">已完成</span>':''}</h2>${newTermsBox(les.id)}${body}
+  ${les.prac&&les.prac.length?`<div style="margin-top:10px"><b>去練習：</b>${les.prac.map(([t,tab])=>`<button class="b s" onclick="show('${tab}')">${t}</button>`).join('')}</div>`:''}</div>
+  <div class="panel"><h2>小測驗</h2><div id="qz">${CV.qs.map((q,n)=>{
+    const opts=q.opts.map((t,j)=>({t,ok:j===q.a}));if(!q.noShuffle)opts.sort(()=>Math.random()-.5);q._o=opts;
+    return `<div class="ql"><b>Q${n+1}.</b> ${q.q}${opts.map((o,j)=>`<label class="opt" id="o${n}_${j}"><input type="radio" name="q${n}" value="${j}"> ${o.t}</label>`).join('')}<div class="why" id="w${n}"></div></div>`}).join('')}</div>
+  <button class="b" id="qsub" onclick="submitQuiz()">送出答案</button><button class="b s" onclick="retryQuiz()">重新出題</button><div id="qres" aria-live="polite"></div></div>
+  <div class="panel">${prev?`<button class="b s" onclick="openLesson(${prev[0]},${prev[1]})">← 上一課</button>`:''}${next?`<button class="b" onclick="openLesson(${next[0]},${next[1]})">下一課 →</button>`:''}</div>`;
+  annotateTerms(lessonHost().querySelector('.lesson'));
+}
+function advHome(){
+  const lv=COURSE.map((L,l)=>l).filter(l=>l>=BEG_LV),total=lv.reduce((s,l)=>s+COURSE[l].lessons.length,0),done=lv.reduce((s,l)=>s+COURSE[l].lessons.filter(x=>CS.done[x.id]).length,0);
+  $('t-adv').innerHTML=`<div class="panel"><h2>進階課程</h2>
+  <div class="mut">建議先完成「新手路徑」再來。這裡包含 GTO 概念、進階與剝削、錦標賽與 ICM、籌碼深度與下注尺度，內容較深，範圍與策略為近似值，不保證獲利。<b>每課開頭都會列出該課的新名詞。</b></div>
+  <div class="bar" style="margin:10px 0"><i style="width:${done/total*100}%"></i></div><div>進階進度：<b>${done}/${total}</b> 課</div></div>
+  ${lv.map(l=>levelCard(l,`第 ${l} 級　${COURSE[l].t}`)).join('')}`;
+}
+
+/* ---- 5. 速查手冊：決策流程卡 + 規則 + 術語 + 常見錯誤 ---- */
+const CARDS=[
+ {t:'① 翻前，還沒有人加注',steps:[['我在哪個位置？後面還有幾個人？','0.1'],['這手牌在這個位置的範圍內嗎？','1.1'],['先歸類這手牌（對子、同花、連張、大牌），小心被支配','1.2'],['在範圍內 → 加注約 2.2–2.5bb（SB 約 3bb）；不在 → 棄牌；不要平跟','1.3']]},
+ {t:'② 翻前，有人加注',steps:[['誰加注？在什麼位置？（越前面範圍越強）',''],['我有沒有位置？沒位置傾向「3-bet 或棄牌」','4.2'],['強牌 3-bet、中等牌跟注、弱牌棄牌','4.1'],['我在大盲？算所需勝率（約 27%），對 BTN 可防守較寬','4.3'],['我開池後被 3-bet？強牌 4-bet、中強牌跟注、其餘棄牌','4.4']]},
+ {t:'③ 翻牌，輪到我先下注（我是翻前加注者）',steps:[['牌面乾燥還是濕潤？誰的範圍占優勢？','2.1'],['我的牌是成牌、聽牌，還是空氣？','0.2'],['下注的目的：價值、保護還是詐唬？都不是就過牌','2.2'],['尺碼：乾燥面約 1/3；強牌濕潤面約 2/3；多人底池少打','2.3']]},
+ {t:'④ 任何一街，面對對手下注',steps:[['還原比例：下注是底池的多少？','3.2'],['算所需勝率（跟注額 ÷（底池 + 下注 + 跟注額））','3.2'],['我的勝率或補中機率是多少？（聽牌用 outs，面對下注只看下一張）','3.1'],['賠率差一點時，再看隱含賠率與位置','3.3'],['決定：勝率夠 → 跟；有強聽牌且對手會棄牌 → 可半詐唬加注；不夠 → 棄牌','3.4']]},
+ {t:'⑤ 河牌（最後一條街）',steps:[['我輪到下注：有更差的牌會跟注嗎？有才價值下注','2.3'],['我面對下注：還原比例、算所需勝率','3.2'],['別忘了對手的下注尺度：越大越可能是強牌或詐唬','']]}
+];
+function renderGuide(){
+  $('t-guide').innerHTML=`<div class="panel"><h2>決策流程卡</h2><div class="mut">不知道「現在這一步該怎麼想」時，找對應的情境，照著問自己。每一步旁邊的連結是對應的課。</div>
+  ${CARDS.map(c=>`<div class="mcard"><b>${c.t}</b><ol>${c.steps.map(([t,id])=>`<li>${t}${id?` <a href="#" onclick="OPEN_BY('${id}');return false" class="mut">（見 ${id}）</a>`:''}</li>`).join('')}</ol></div>`).join('')}</div>
+  <div class="panel"><h2>規則補充</h2><div class="lesson">${COURSE[0].lessons[3].body()}</div></div>
+  <div class="panel"><h2>術語表</h2><label for="g-q">搜尋術語（中文或英文）</label><input type="text" id="g-q" placeholder="例如：位置、bluff、SPR" oninput="renderGlossary()">
+  <div class="mut" id="g-count" aria-live="polite"></div><div id="g-list" style="margin-top:6px"></div></div>
+  <div class="panel"><h2>新手最常犯的 10 個錯誤</h2>${MISTAKES.map(m=>`<div class="mcard"><b>${m.title}</b><div><span class="mut">為什麼錯：</span>${m.why}</div><div><span class="mut">怎麼改：</span>${m.fix}</div><div>${m.prac.map(([t,tab])=>`<button class="b s" onclick="show('${tab}')">${t}</button>`).join('')}</div></div>`).join('')}</div>`;
+  renderGlossary();
+  annotateTerms($('t-guide').querySelector('.lesson'));
+}
+const _renderDemo=renderDemo;
+renderDemo=function(){_renderDemo();annotateTerms($('t-demo'))};
+
+/* ---- 6. 各功能頁「什麼時候用」說明 ---- */
+const TOOL_WHEN={
+ 't-course':{one:'每天先做這裡',what:'新手主線：5 個階段、20 課，每課有小測驗。',when:'第一次使用，以及每天開始練習時。先看「今日任務」，再按「繼續學習」。',goal:'每天 1 課加上任務，約 15–20 分鐘。',next:'讀完課，照該階段卡片裡「讀完課之後，依序做」去練習、看示範、打對戰。'},
+ 't-learn':{one:'翻前整體圖與面對加注練習',what:'位置、尺碼表，以及「面對開池：棄牌、跟注、3-bet」練習。',when:'學完階段 2 之後想看整體圖時，或學到階段 5 做「面對加注」練習。',goal:'面對加注 50 題、正確率 80% 以上。',next:'回到新手路徑，繼續下一課或打對戰。'},
+ 't-demo':{one:'看「為什麼這樣打」',what:'5 個逐步講解的示範牌局。',when:'讀完相關階段的課之後；覺得「懂了但不會用」時最有幫助。',goal:'每個示範先自己猜每一步，再看講解。',next:'看完去做頁尾的「去練習」。'},
+ 't-guide':{one:'卡住時查這裡',what:'決策流程卡、規則補充、術語表、新手常見錯誤。',when:'不知道「這一步該怎麼想」、忘了規則、看到不懂的詞時，隨時回來查。',goal:'不用背；用到就查。',next:'依決策卡的連結回到對應的課複習。'},
+ 't-pre':{one:'學完階段 2 後每天 10 題熱身',what:'給位置與手牌，判斷加注或棄牌。',when:'學完階段 2（翻前）之後，每天用 5 分鐘熱身；不是在對戰中使用。',goal:'累積 30 題、正確率 85% 以上算畢業，之後偶爾複習。',next:'畢業後去對戰，用「策略提示」實際打翻前。'},
+ 't-eq':{one:'訓練勝率直覺',what:'先憑直覺估計勝率，再看實際答案。',when:'學完 3.1（outs）之後；對戰結束覺得「不知道自己贏面多大」時。',goal:'平均誤差 < 5 個百分點。',next:'接著練「底池賠率」，把勝率拿來做決定。'},
+ 't-pot':{one:'面對下注時要不要跟',what:'給底池與下注，判斷跟注或棄牌。',when:'學完 3.2（所需勝率）之後，每天 5 題。',goal:'至少 20 題、正確率 80% 以上。',next:'去對戰，在真的面對下注時套用。'},
+ 't-calc':{one:'驗證用工具',what:'輸入手牌、公共牌與對手範圍，算出勝率。',when:'想驗證某手牌的勝率時，例如對戰結束後複盤。',goal:'不用練；需要時用。',next:'把算出的勝率拿去比所需勝率（3.2）。'},
+ 't-sim':{one:'策略提示 → 無提示',what:'和電腦對手打牌，行動前可看提示，結束後有檢討。',when:'學完階段 2 開始。先用「策略提示」邊打邊對照；符合建議的比例穩定在 80% 以上，再改「無提示」測試自己。每打完看「本手檢討」。',goal:'每天 3–5 手；建議先打 6 人現金桌 100bb。錦標賽、9 人桌留到進階。',next:'到「我的 → 手牌歷史」複盤常犯的錯誤。'},
+ 't-adv':{one:'新手路徑完成後再來',what:'GTO 概念、進階與剝削、錦標賽與 ICM、籌碼深度與尺度。',when:'完成新手路徑之後。',goal:'依興趣選讀，每課開頭有新名詞說明。',next:'搭配「情境練習」做專項練習。'},
+ 't-scn':{one:'專項練習：短碼、尺度',what:'短碼推或棄牌、面對全下、長碼翻後下注、尺度解讀。',when:'完成階段 4 之後；想補強某個弱項時。',goal:'每種題型 15–20 題。',next:'回對戰實際應用。'},
+ 't-icm':{one:'錦標賽名次獎金',what:'ICM 計算機與泡沫期跟注全下練習。',when:'要打錦標賽之前，或理解名次獎金時。',goal:'至少 20 題、正確率 70% 以上。',next:'打一場錦標賽並複盤。'},
+ 't-kuhn':{one:'理解 GTO 概念的小實驗',what:'在瀏覽器裡用 CFR 求解最簡單的撲克。',when:'學完進階「GTO 核心概念」之後；純粹想看均衡策略怎麼形成。',goal:'不用練。',next:'回到進階課程。'},
+ 't-paper':{one:'做功課用',what:'近五年的撲克 AI 與博弈論論文索引。',when:'想深入研究時；入門者不需要。',goal:'不用讀完。',next:'—'},
+ 't-hist':{one:'每場結束後複盤',what:'你打過的手牌、每個決策的對照與錯誤分類。',when:'每打完一場，挑 3–5 手（輸大池或不確定的）。',goal:'找出最常犯的 1–2 種錯誤。',next:'回到對應的課或練習補強。'},
+ 't-stat':{one:'每週看一次成績',what:'各項練習的正確率與平均誤差。',when:'每週一次，決定這週要加強什麼。',goal:'讓最低的那一項先達標。',next:'去做對應的練習。'}
+};
+(function whenBox(){
+  const el=document.createElement('details');el.id='whenbox';el.className='whenbox';
+  const main=document.querySelector('main');main.insertBefore(el,main.firstChild);
+  el.addEventListener('toggle',()=>{const id=el.dataset.id;if(!id)return;let c={};try{c=JSON.parse(localStorage.getItem('gtoWhenClosed')||'{}')}catch(e){}c[id]=!el.open;try{localStorage.setItem('gtoWhenClosed',JSON.stringify(c))}catch(e){}});
+})();
+function setWhen(id){
+  const t=TOOL_WHEN[id],el=document.getElementById('whenbox');if(!el)return;
+  if(!t){el.style.display='none';return}
+  let c={};try{c=JSON.parse(localStorage.getItem('gtoWhenClosed')||'{}')}catch(e){}
+  el.style.display='';el.dataset.id='';el.open=!c[id];el.dataset.id=id;
+  el.innerHTML=`<summary>🕒 什麼時候用這個功能？<span class="mut"> ${t.one}</span></summary><ul><li><b>這是什麼：</b>${t.what}</li><li><b>什麼時候用：</b>${t.when}</li><li><b>練多少：</b>${t.goal}</li><li><b>下一步：</b>${t.next}</li></ul>`;
+}
+const _show4=show;
+show=function(id){_show4(id);setWhen(id)};
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
 const UA=navigator.userAgent;
