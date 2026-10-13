@@ -2484,7 +2484,7 @@ function renderInstall(){
     <ol style="line-height:1.9">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>${note?`<div class="mut">${note}</div>`:''}</details>`;
   $('t-install').innerHTML=`<div class="panel"><h2>安裝成 App</h2>
     <div>目前裝置：<b>${devName}</b> ｜ 狀態：${st?'✅ 已以 App 模式執行':'尚未安裝'} ｜ 離線快取：${swState}</div>
-    ${location.protocol==='file:'?'<div class="res warn">你現在是用檔案（file://）開啟，瀏覽器不允許安裝。請把 pwa 資料夾部署到 https 網站後，再用網址開啟。</div>':''}
+    ${location.protocol==='file:'?'<div class="res warn">你現在是用檔案（file://）開啟，瀏覽器不允許安裝。請改用網站網址（https://）開啟後再安裝。</div>':''}
     ${ENV.inApp?'<div class="res warn">偵測到 App 內建瀏覽器（LINE / Facebook / Instagram 等）。這類瀏覽器不支援安裝，請先用 '+(ENV.ios?'Safari':'Chrome')+' 開啟本頁。</div>':''}
     ${deferredPrompt&&!st?'<button class="b big" onclick="doInstall()">一鍵安裝</button>':''}
     <div class="mut">安裝後會有桌面圖示、全螢幕開啟、離線可用；手牌歷史等資料保存在該裝置，不會上傳。</div></div>
@@ -2509,12 +2509,8 @@ function renderInstall(){
     <ul style="line-height:1.9"><li>網址必須是 <b>https://</b>（或 localhost）；用 file:// 或 http:// 都不能安裝。</li>
     <li>在 LINE / FB / IG 內開啟的連結，請改用外部瀏覽器（Safari 或 Chrome）。</li>
     <li>已安裝過的話，瀏覽器不會再顯示安裝選項，請直接從主畫面圖示開啟。</li>
-    <li>更新版本：關閉 App 後重新開啟一兩次，新版會自動換上。</li>
-    <li>刪除 App：長按圖示移除即可（資料會一併清除）。</li></ul></details>
-  <details class="panel"><summary style="cursor:pointer;font-weight:700">🚀 給發佈者：如何上線</summary>
-    <ol style="line-height:1.9"><li>把整個 <code>pwa</code> 資料夾（index.html、manifest.webmanifest、sw.js、icons/）原樣上傳到支援 https 的靜態主機，例如 GitHub Pages、Netlify、Cloudflare Pages。</li>
-    <li>更新內容後，請把 <code>sw.js</code> 裡的 <code>VERSION</code> 加 1（例如 v2），使用者端才會換掉舊快取。</li>
-    <li>可用 Chrome 開發者工具 → Lighthouse / Application 面板檢查 PWA 是否合格。</li></ol></details>`;
+    <li>更新版本：看到「有新版本可用」時按「立即更新」；沒看到的話，關閉 App 後重新開啟一兩次即可。</li>
+    <li>刪除 App：長按圖示移除即可（資料會一併清除）。</li></ul></details>`;
 }
 
 /* ============ 啟動 ============ */
