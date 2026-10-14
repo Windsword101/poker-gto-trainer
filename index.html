@@ -251,6 +251,7 @@ table.grid td.pick{outline:2px solid #ffd54a;outline-offset:-2px;position:relati
 .ocinfo{margin:6px 0;font-size:14px}
 .ocf{margin-top:10px;background:#0f1720}
 .ocf input{background:#0f1720;color:#fff;border:1px solid var(--line);border-radius:6px;padding:6px}
+.sheet .poschips{flex-wrap:wrap;overflow:visible}.sheet .poschips .b{min-height:36px;padding:4px 10px}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -1209,7 +1210,7 @@ function renderSim(){
   $('s-max').onchange=e=>{SIM.max=+e.target.value;renderSim()};
   G.pb=G.board.length;G.pbets=G.players.map(p=>p.bet);G.holeAnim=false;if(typeof sheetA11y==='function')sheetA11y();
 }
-const render=renderSim;
+const render=()=>renderSim();
 
 /* ============ 課程：由淺入深（8 級 25 課） ============ */
 const Q=(q,opts,a,why)=>({q,opts,a,why});
@@ -3821,6 +3822,81 @@ renderEq=function(){
   bar.innerHTML='<button class="b" data-m="est" aria-pressed="true">估勝率</button><button class="b s" data-m="outs">數 outs（教練）</button>';
   first.insertBefore(bar,first.firstChild);
   bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{EQM=b.dataset.m;EQM==='outs'?(oc?renderOc():ocNew()):renderEq()});
+};
+
+/* ===== 對戰：點座位看範圍表 + 對手風格選擇（全緊／隨機…）===== */
+const STYLE_MODES=[['random','隨機（每桌混合不同風格）'],['tight','全緊（全部緊兇，練標準範圍）'],['gto','全標準（接近策略建議）'],['lag','全鬆兇（練對付激進）'],['station','全跟注站（練價值下注）']];
+const _assignStylesBase=assignStyles;
+assignStyles=function(){
+  const m=SIM.styleMode||'random';
+  if(m==='random')return _assignStylesBase();
+  const st={tight:'tag',gto:'gto',lag:'lag',station:'station'}[m]||'gto';
+  SIM.styles=[null,...Array(Math.max(0,(SIM.n||6)-1)).fill(st)];resetStats();
+};
+let RG={pos:null,opp:'BTN'};
+function openRange(pos){G.sheet='range';RG.pos=pos;G.sheetFocus=true;renderSim()}
+function rangeMapFor(pos,n){
+  const M=n===9?{UTG:RM9.UTG,UTG1:RM9.UTG1,MP:RM9.MP,LJ:RM9.LJ,HJ:RM.HJ,CO:RM.CO,BTN:RM.BTN,SB:RM.SB}:RM;
+  return M[pos]||null;
+}
+function rangeSheetHTML(){
+  const n=SIM.n,ord=POS_ORDER[n],pos=RG.pos&&ord.includes(RG.pos)?RG.pos:ord[0],me=posName(0);
+  const chips=ord.map(p=>`<button class="b ${p===pos?'':'s'}" data-rp="${p}">${p}${p===me?'（你）':''}</button>`).join('');
+  let body='';
+  if(pos==='BB'){
+    const ops=['UTG','CO','BTN'];if(!ops.includes(RG.opp))RG.opp='BTN';
+    const sc=FACE['BB 面對 '+RG.opp+' 開池'];
+    body=`<div class="mut">大盲已經投了 1bb，面對別人開池時有「跟注」與「3-bet」兩種進池方式。選擇開池者：</div>
+      <div class="poschips">${ops.map(o=>`<button class="b ${o===RG.opp?'':'s'}" data-ro="${o}">${o} 開池</button>`).join('')}</div>
+      ${grid3(sc,'')}<div class="mut">${sc.sz}。範圍為近似值，供建立直覺。</div>`;
+  }else{
+    const M=rangeMapFor(pos,n),pct=M?expand(M).reduce((s,x)=>s+x.w,0)/1326*100:0;
+    body=`<div class="mut">${pos}（${POS_ZH[pos]}）「前面的人都棄牌」時的開池範圍：約 <b>${pct.toFixed(1)}%</b> 的手牌。越前面越緊、越後面越寬。</div>${M?gridHTML(M,''):''}
+      ${pos==='SB'?'<div class="mut">SB 面對 BTN 開池時的反應，可在「學習 → 翻前教學」的「面對加注」練習。</div>':''}`;
+  }
+  return `<div class="modal" onclick="closeSheet()"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1" onclick="event.stopPropagation()">
+    <div class="sheethead"><b id="sheet-title">📊 位置範圍表（${n} 人桌）</b><button class="b s" aria-label="關閉視窗" onclick="closeSheet()">✕ 關閉</button></div>
+    <div class="poschips" role="group" aria-label="選擇位置">${chips}</div>${body}</div></div>`;
+}
+const _renderSimRange=renderSim;
+renderSim=function(){
+  _renderSimRange();
+  const el=document.getElementById('t-sim');if(!el||!G)return;
+  // 座位可點
+  el.querySelectorAll('.tbl .seat').forEach((s,k)=>{
+    if(s.querySelector('.stk')&&/淘汰/.test(s.textContent))return;
+    const pos=posName(k);s.style.cursor='pointer';s.setAttribute('role','button');s.tabIndex=0;
+    s.setAttribute('aria-label',`${pos} 位置，查看範圍表`);
+    s.onclick=()=>openRange(pos);s.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openRange(pos)}};
+  });
+  // 工具列按鈕
+  const ib=el.querySelector('.simtop .row1 > div:last-child');
+  if(ib&&!ib.querySelector('.rgbtn')){
+    const b=document.createElement('button');b.className='b s ib rgbtn';b.title='位置範圍表';b.setAttribute('aria-label','位置範圍表');b.textContent='📊';b.onclick=()=>openRange(posName(0));
+    ib.insertBefore(b,ib.firstChild);
+  }
+  const st=el.querySelector('.simtop .st');if(st&&!/點座位/.test(st.textContent))st.textContent+='｜點座位看範圍';
+  // 設定視窗：對手風格
+  if(G.sheet==='set'){
+    const tb=el.querySelector('.sheet .topbar2');
+    if(tb&&!document.getElementById('s-sty')){
+      const d=document.createElement('div');d.style.marginTop='6px';
+      d.innerHTML=`對手風格：<select id="s-sty" aria-label="對手風格" style="width:auto">${STYLE_MODES.map(([v,l])=>`<option value="${v}" ${v===(SIM.styleMode||'random')?'selected':''}>${l}</option>`).join('')}</select><div class="mut">按「套用並重新開始」後生效。全緊＝所有對手都是緊兇，比較容易練標準範圍；隨機＝每位對手風格不同，練習辨認與調整。</div>`;
+      tb.parentNode.insertBefore(d,tb.nextSibling);
+      document.getElementById('s-sty').onchange=e=>{SIM.styleMode=e.target.value};
+    }
+  }
+  // 範圍表視窗
+  if(G.sheet==='range'){
+    el.insertAdjacentHTML('beforeend',rangeSheetHTML());
+    const sh=el.querySelector('.sheet');
+    sh.onclick=e=>{
+      e.stopPropagation();
+      const p=e.target.closest('[data-rp]'),o=e.target.closest('[data-ro]');
+      if(p){RG.pos=p.dataset.rp;renderSim()}else if(o){RG.opp=o.dataset.ro;renderSim()}
+    };
+    if(typeof sheetA11y==='function')sheetA11y();
+  }
 };
 
 /* ============ PWA：註冊、安裝提示（Android / iOS / 電腦） ============ */
