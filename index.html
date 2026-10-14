@@ -1774,7 +1774,7 @@ function newHand(){
   const d=shuffled(52),bbAmt=sng?BLIND_LEVELS[TN.level][1]:1;
   G={players:[],full:d.slice(2*N,2*N+5),board:[],street:0,curBet:1,minRaise:1,over:false,reveal:false,pf:{raises:0,opener:-1,last:-1},pfMap:[],rng:[],decisions:[],log:[],last:[],winners:[],win:0,pay:[],flags:[],rec:[],seen:{},review:null,showAll:false,pb:0,pbets:[],holeAnim:true,info:null,hTimer:0,cur:0,adv:null,msg:'',nAlive:alive.length,bbAmt,startStack:[],posOf:[]};
   for(let i=0;i<N;i++){
-    const live=alive.includes(i),st=live?(sng?TN.chips[i]/bbAmt:SIM.depth):0;
+    const live=alive.includes(i),st=live?(sng?TN.chips[i]/bbAmt:carryStack(i)):0;
     G.players.push({name:SEATN[i],stack:st,bet:0,total:0,folded:!live,allin:false,acted:false,dead:!live,cards:live?[d[2*i],d[2*i+1]]:[]});
     G.startStack.push(st);
   }
@@ -3896,6 +3896,43 @@ renderSim=function(){
       if(p){RG.pos=p.dataset.rp;renderSim()}else if(o){RG.opp=o.dataset.ro;renderSim()}
     };
     if(typeof sheetA11y==='function')sheetA11y();
+  }
+};
+
+/* ===== 現金桌：籌碼延續（不每手重置）；輸光者自動補碼 ===== */
+SIM.carry=true;SIM.stk=null;SIM.rebuys=[];
+function carryStack(i){
+  if(!SIM.carry||SIM.flop||!SIM.stk||SIM.stk[i]==null)return SIM.depth;
+  if(SIM.stk[i]>=1)return SIM.stk[i];
+  SIM.rebuys[i]=(SIM.rebuys[i]||0)+1;SIM.rebuyNow=SIM.rebuyNow||[];SIM.rebuyNow.push(i);
+  return SIM.depth;
+}
+const _finishCarry=finish;
+finish=function(w,sd){
+  _finishCarry(w,sd);
+  if(SIM.mode==='cash'&&SIM.carry&&!SIM.flop&&G&&G.over)SIM.stk=G.players.map(p=>p.stack);
+};
+const _newMatchCarry=newMatch;
+newMatch=function(){SIM.stk=null;SIM.rebuys=[];SIM.rebuyNow=[];_newMatchCarry()};
+const _newHandCarry=newHand;
+newHand=function(){
+  SIM.rebuyNow=[];
+  _newHandCarry();
+  if(G&&SIM.rebuyNow.length&&typeof slog==='function'){
+    slog('補碼：'+SIM.rebuyNow.map(k=>(k===0?'你':SEATN[k])).join('、')+` 上一手輸光，補碼到 ${SIM.depth}bb`);
+    if(SIM.rebuyNow.includes(0))G.last[0]='補碼';
+  }
+};
+function setCarry(v){SIM.carry=v;newMatch()}
+const _renderSimCarry=renderSim;
+renderSim=function(){
+  _renderSimCarry();
+  const el=document.getElementById('t-sim');if(!el||!G||G.sheet!=='set'||SIM.mode!=='cash')return;
+  const tb=el.querySelector('.sheet .topbar2');
+  if(tb&&!document.getElementById('s-carry')){
+    const d=document.createElement('div');d.style.marginTop='6px';
+    d.innerHTML=`<button class="b ${SIM.carry?'':'s'}" id="s-carry" onclick="setCarry(!SIM.carry)">${SIM.carry?'✔ ':''}籌碼延續（不每手重置）</button><div class="mut">開啟：贏輸的籌碼帶到下一手，有人輸光才補碼到起始深度，像真的打一整場。關閉：每手都重置為起始深度。切換會重新開始比賽。${SIM.flop?'<br>（「從翻牌開始」模式固定每手重置）':''}</div>`;
+    tb.parentNode.insertBefore(d,tb.nextSibling);
   }
 };
 
