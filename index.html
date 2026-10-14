@@ -252,6 +252,7 @@ table.grid td.pick{outline:2px solid #ffd54a;outline-offset:-2px;position:relati
 .ocf{margin-top:10px;background:#0f1720}
 .ocf input{background:#0f1720;color:#fff;border:1px solid var(--line);border-radius:6px;padding:6px}
 .sheet .poschips{flex-wrap:wrap;overflow:visible}.sheet .poschips .b{min-height:36px;padding:4px 10px}
+.lic-code{width:100%;max-width:420px;margin:4px 0}.paywall{border-color:var(--acc)}.freebar{margin:0 0 10px}.lic-msg{margin-top:6px;min-height:20px}
 
 .ibanner{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#143049;border-bottom:1px solid var(--line);padding:8px 16px;font-size:13px}
 .ibanner .b{padding:6px 12px;margin:0 0 0 6px}
@@ -3933,6 +3934,145 @@ renderSim=function(){
     const d=document.createElement('div');d.style.marginTop='6px';
     d.innerHTML=`<button class="b ${SIM.carry?'':'s'}" id="s-carry" onclick="setCarry(!SIM.carry)">${SIM.carry?'✔ ':''}籌碼延續（不每手重置）</button><div class="mut">開啟：贏輸的籌碼帶到下一手，有人輸光才補碼到起始深度，像真的打一整場。關閉：每手都重置為起始深度。切換會重新開始比賽。${SIM.flop?'<br>（「從翻牌開始」模式固定每手重置）':''}</div>`;
     tb.parentNode.insertBefore(d,tb.nextSibling);
+  }
+};
+
+/* ===== 授權與試用（免費版／完整版）===== */
+/* 付費牆開關：正式上線前保持 false（全部功能開放）。測試版建置時由 build 腳本改為 true。 */
+const LIC_ENABLED=/*LIC*/false;
+const LIC_PUB={"kty":"EC","x":"Zy6bbEx-rI0KUcVwk93a4RYCx6n5JRgUu2qIDo9mKUQ","y":"c_U1NHJjaaZjUifD9jd2ZthQT-TXlVJWUyh8ckNiXWo","crv":"P-256"};
+const LIC_CFG={price:'NT$299（一次買斷）',buyUrl:'',buyHow:'購買管道正在準備中（目前為內部測試）。'};
+const LIC_REVOKED=[];            // 退款／外流的訂單編號（把 o 欄位放進來即可停用）
+const FREE_SIM_DAILY=20;         // 免費版：每天對戰手數
+const LOCK_TABS={'t-eq':'勝率預測與 Outs 教練','t-pot':'底池賠率練習','t-adv':'進階課程','t-scn':'情境練習','t-icm':'ICM 練習','t-kuhn':'CFR 演示'};
+const FREE_LEVELS=2;             // 免費版開放課程階段 1–2（L0、L1）
+let LIC={ok:!LIC_ENABLED,info:null,pending:false};
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
+const b64uBytes=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a};
+async function licVerify(code){
+  try{
+    const m=/^PKR1-([\w-]+)\.([\w-]+)$/.exec((code||'').trim());if(!m)return {err:'格式不正確'};
+    if(!(window.crypto&&crypto.subtle))return {err:'這個瀏覽器環境不支援驗證（請用 https 網址開啟）'};
+    const key=await crypto.subtle.importKey('jwk',LIC_PUB,{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+    const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64uBytes(m[2]),new TextEncoder().encode(m[1]));
+    if(!ok)return {err:'授權碼無效'};
+    const p=JSON.parse(new TextDecoder().decode(b64uBytes(m[1])));
+    if(!p||p.v!==1)return {err:'授權碼版本不符'};
+    if(LIC_REVOKED.includes(p.o))return {err:'這組授權碼已停用'};
+    return {info:p};
+  }catch(e){return {err:'驗證失敗'}}
+}
+async function licActivate(code){
+  const r=await licVerify(code);
+  if(r.err)return r;
+  lsSet('gtoLic',code.trim());LIC={ok:true,info:r.info,pending:false};return r;
+}
+function licRemove(){lsDel('gtoLic');location.reload()}
+(async function licInit(){
+  if(!LIC_ENABLED)return;
+  const c=lsGet('gtoLic');if(!c)return;
+  LIC={ok:true,info:null,pending:true};           // 先樂觀開放，避免畫面閃一下鎖頭
+  const r=await licVerify(c);
+  if(r.info)LIC={ok:true,info:r.info,pending:false};
+  else if(!(r.err&&/不支援/.test(r.err))){LIC={ok:false,info:null,pending:false};lsDel('gtoLic');location.reload()}
+})();
+/* 免費版每日對戰手數 */
+const todayKey=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
+function freeUsed(){try{const o=JSON.parse(lsGet('gtoFree')||'{}');return o.d===todayKey()?o.h|0:0}catch(e){return 0}}
+function freeLeft(){return Math.max(0,FREE_SIM_DAILY-freeUsed())}
+function freeBump(){lsSet('gtoFree',JSON.stringify({d:todayKey(),h:freeUsed()+1}))}
+/* 付費牆畫面 */
+function paywallHTML(what){
+  const buy=LIC_CFG.buyUrl?`<a class="b big" href="${LIC_CFG.buyUrl}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">前往購買（${LIC_CFG.price}）</a>`:`<div class="mut">${LIC_CFG.buyHow}</div>`;
+  return `<div class="panel paywall"><h2>🔒 ${what}</h2>
+  <div>這是<b>完整版</b>內容。免費版已包含：階段 1–2 課程（看懂牌局、翻前）、翻前範圍練習、示範牌局、速查手冊、計算機，以及每天 ${FREE_SIM_DAILY} 手 6 人桌對戰。</div>
+  <div style="margin:8px 0"><b>完整版加贈：</b>階段 3–5 全部課程、勝率預測與 Outs 教練、底池賠率、9 人桌與錦標賽（ICM）、情境練習、進階課程、對戰無次數限制。${LIC_CFG.price}，買一次永久使用，不訂閱。</div>
+  ${buy}
+  <div style="margin-top:12px"><label for="lic-code">已經購買？貼上授權碼：</label><input type="text" id="lic-code" class="lic-code" placeholder="PKR1-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button class="b lic-go">啟用</button><div class="lic-msg" aria-live="polite"></div></div>
+  <div class="mut" style="margin-top:8px">本站為教學與練習用途，不含真錢賭博，也不保證獲利。</div></div>`;
+}
+function bindPay(root){
+  (root||document).querySelectorAll('.paywall,.licpanel').forEach(p=>{
+    const go=p.querySelector('.lic-go'),inp=p.querySelector('.lic-code'),msg=p.querySelector('.lic-msg');
+    if(!go||go.dataset.b)return;go.dataset.b=1;
+    const run=async()=>{
+      msg.textContent='驗證中…';const r=await licActivate(inp.value);
+      if(r.err){msg.style.color='#ff8a80';msg.textContent='✘ '+r.err;return}
+      msg.style.color='#4cff9a';msg.textContent='✔ 啟用成功，正在重新載入…';setTimeout(()=>location.reload(),700);
+    };
+    go.onclick=run;inp.onkeydown=e=>{if(e.key==='Enter')run()};
+  });
+}
+/* 分頁鎖 */
+const _showLic=show;
+show=function(id){
+  if(id==='t-sim'&&!LIC.ok&&!G&&freeLeft()<=0){
+    _showLic(id);const el=document.getElementById('t-sim');el.innerHTML=paywallHTML('今日免費對戰手數已用完（每天 '+FREE_SIM_DAILY+' 手）');bindPay(el);return;
+  }
+  _showLic(id);
+  if(!LIC.ok&&LOCK_TABS[id]){const el=document.getElementById(id);el.innerHTML=paywallHTML(LOCK_TABS[id]);bindPay(el)}
+  if(id==='t-install'||id==='t-stat')licPanel(id);
+};
+function licPanel(host){
+  const el=document.getElementById(host);if(!el||!LIC_ENABLED)return;const old=el.querySelector('.licpanel');if(old)old.remove();
+  const d=document.createElement('div');d.className='panel licpanel';
+  if(LIC.ok){
+    const i=LIC.info;
+    d.innerHTML=`<h2>授權</h2><div class="res ok"><b>✔ 完整版已啟用</b>${i?`<div class="mut">訂單 ${String(i.o).replace(/[<>&]/g,'')}${i.t?'・'+new Date(i.t*1000).toLocaleDateString():''}</div>`:''}</div><button class="b s" onclick="if(confirm('移除這台裝置上的授權？之後要重新輸入授權碼。'))licRemove()">移除授權</button>`;
+  }else{
+    d.innerHTML=`<h2>授權</h2><div>目前是<b>免費版</b>。今日剩餘對戰手數：<b>${freeLeft()}</b>/${FREE_SIM_DAILY}。</div>
+      <label for="lic-code-${host}" style="margin-top:8px">輸入授權碼升級完整版</label><input type="text" id="lic-code-${host}" class="lic-code" placeholder="PKR1-…" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="b lic-go">啟用</button><div class="lic-msg" aria-live="polite"></div>
+      <div class="mut" style="margin-top:6px">${LIC_CFG.buyUrl?'還沒買？<a href="'+LIC_CFG.buyUrl+'" target="_blank" rel="noopener">前往購買</a>':LIC_CFG.buyHow}</div>`;
+  }
+  el.insertBefore(d,el.firstChild);bindPay(el);
+}
+/* 課程：階段 3 以上需完整版 */
+const _openLessonLic=openLesson;
+openLesson=function(l,i){
+  if(!LIC.ok&&l>=FREE_LEVELS){
+    if(l>=BEG_LV)return show('t-adv');
+    CV.lv=null;show('t-course');
+    const el=document.getElementById('t-course');el.insertAdjacentHTML('afterbegin',paywallHTML(`${COURSE[l].lessons[i].id} ${COURSE[l].lessons[i].t}（階段 ${l+1} 以上）`));bindPay(el);window.scrollTo(0,0);return;
+  }
+  _openLessonLic(l,i);
+};
+const _renderCourseLic=renderCourse;
+renderCourse=function(){
+  _renderCourseLic();
+  if(LIC.ok)return;
+  const el=document.getElementById('t-course');if(!el)return;
+  el.querySelectorAll('.lrow').forEach(r=>{
+    const m=/openLesson\((\d+),/.exec(r.getAttribute('onclick')||'');
+    if(m&&+m[1]>=FREE_LEVELS){const s=r.querySelector('span');if(s&&!/🔒/.test(s.textContent))s.textContent='🔒'}
+  });
+  if(typeof CV!=='undefined'&&CV.lv===null&&!el.querySelector('.freebar')){
+    el.insertAdjacentHTML('afterbegin',`<div class="res freebar"><b>免費版</b>：階段 1–2 全部開放。階段 3 以上、勝率與賠率練習、9 人桌／錦標賽需完整版（${LIC_CFG.price}）。<a href="#" onclick="show('t-install');return false">輸入授權碼</a></div>`);
+  }
+};
+/* 對戰：免費版限 6 人桌現金局、每天 N 手 */
+const _finishLic=finish;
+finish=function(w,sd){const was=G&&G.over;_finishLic(w,sd);if(!LIC.ok&&G&&G.over&&!was)freeBump()};
+const _newMatchLic=newMatch;
+newMatch=function(){
+  if(!LIC.ok&&(SIM.n===9||SIM.mode==='sng')){SIM.n=6;SIM.mode='cash';if(G){G.sheet='pay';G.payMsg='9 人桌與錦標賽（SNG／ICM）';return renderSim()}}
+  _newMatchLic();
+};
+const _newHandLic=newHand;
+newHand=function(){
+  if(!LIC.ok&&G&&freeLeft()<=0){G.sheet='pay';G.payMsg='今日免費對戰手數已用完（每天 '+FREE_SIM_DAILY+' 手）';return renderSim()}
+  _newHandLic();
+};
+const _renderSimLic=renderSim;
+renderSim=function(){
+  _renderSimLic();
+  const el=document.getElementById('t-sim');if(!el||!G)return;
+  if(!LIC.ok){const st=el.querySelector('.simtop .st');if(st&&!/免費剩/.test(st.textContent))st.textContent+=`｜免費剩 ${freeLeft()} 手`}
+  if(G.sheet==='pay'&&!LIC.ok){
+    el.insertAdjacentHTML('beforeend',`<div class="modal" onclick="closeSheet()"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1" onclick="event.stopPropagation()"><div class="sheethead"><b id="sheet-title">完整版功能</b><button class="b s" aria-label="關閉視窗" onclick="closeSheet()">✕ 關閉</button></div>${paywallHTML(G.payMsg||'完整版功能')}</div></div>`);
+    bindPay(el);if(typeof sheetA11y==='function')sheetA11y();
   }
 };
 
