@@ -1,11 +1,14 @@
 // 離線快取：預先快取核心檔案，之後優先用快取並在背景更新。
 // VERSION 由建置流程依 index.html 內容雜湊自動寫入，內容有變就會換版並通知頁面。
-const VERSION = '6aa7042e';
+const VERSION = '3185123a';
 const CACHE = 'gto-trainer-' + VERSION;
 const ASSETS = [
   './',
   'index.html',
   'manifest.webmanifest',
+  'terms.html',
+  'privacy.html',
+  'refund.html',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',
